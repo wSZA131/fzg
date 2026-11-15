@@ -1,0 +1,44 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install CPU torch first (smaller wheels)
+        run: |
+          pip install --index-url https://download.pytorch.org/whl/cpu torch
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: |
+          ruff check app/ --select E9,F63,F7,F82  # 仅致命错误，避免对既有风格大范围报错
+
+      - name: Test
+        env:
+          USE_REAL_AI: "false"
+          OCR_PROVIDER: "mock"
+          USE_NEO4J: "false"
+          AGENT_HISTORY_BACKEND: "memory"
+        run: |
+          python -m pytest -q --ignore=tests/test_api_contract_integration.py

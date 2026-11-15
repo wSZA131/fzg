@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *.pyo
+*.cpython-*.py
 
 # Virtual environments
 venv/
@@ -29,6 +30,24 @@ backend/data/default_user_*.json
 backend/data/user_*.json
 backend/data/user_plans.json
 backend/data/users.json
+# 运行时用户数据（画像/会话/行为/题库/诊断/学习计划等，勿提交）
+backend/data/guest_*.json
+backend/data/ccc_*.json
+backend/data/reg4_*.json
+backend/data/stu_*.json
+backend/data/student_*.json
+backend/data/check_*.json
+backend/data/ddl_*.json
+backend/data/eval_*.json
+backend/data/smoke_*.json
+backend/data/sync_*.json
+backend/data/space_*.json
+backend/data/probe_*.json
+backend/data/concept_*.json
+backend/data/comp_*.json
+backend/data/diag_*.json
+backend/data/u1_*.json
+backend/data/*@*.json
 /data/
 backend/run/*.pid
 .run/

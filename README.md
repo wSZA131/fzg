@@ -25,21 +25,16 @@
   - 记录任务完成度、正确率、耗时，并动态更新学生掌握度。
   - 请求体：`{student_id, task_id, task_type, correct_count, total_count, duration_seconds, concept}`
 
-## 🎯 竞赛改进文档
+## 🎯 参赛与评测材料
 
-### 性能基准与优化
-
-- **[性能基准对比报告](docs/PERFORMANCE_BENCHMARK.md)**：混合检索(RAG-Graph)相比纯文本精度✅+3.5%，延迟+16.7%（在可接受范围）
-- **性能测试脚本**：`backend/scripts/bench_comparison.py` - 对比纯文本/纯图谱/混合检索的性能
-- **教育领域测试集**：`backend/scripts/education_testset.json` - 40个中学数学/英语/物理用例
-
-### 商业模式与成本分析  
-
-- **[商业模式报告](docs/BUSINESS_MODEL.md)**：
-  - 收入预测：Y1 ¥4.1M (B2B+B2C+渠道)
-  - 成本结构：Y1 ¥4.6M（86%人力成本）
-  - 盈亏平衡：Year 2 达EBITDA +¥2.7M
-  - 融资路线：Seed ¥2.5M → Series A ¥8-10M → IPO 2028
+- **[作品信息收集表正文素材](docs/COMPETITION_SUBMISSION.md)**：背景与价值、创新性、数据集、关键代码解读、可量化指标、华为云产品价值
+- **[Demo 演示脚本](docs/DEMO_SCRIPT.md)**：5 分钟分镜、截图清单、PPT 大纲、答辩问答
+- **评测数据**（`backend/docs/`）：
+  - `hybrid_retrieval_report.json`：检索 hit@5 100%、关键词覆盖率 83.3%、平均延迟 33.5 ms（6 条用例）
+  - `graph_availability_report.json`：图谱连通率 100%、图谱上下文命中率 60%（5 条用例）
+  - `agent_eval_report.json`：10 条用例均产生工具调用轨迹
+- **评测脚本**：`backend/scripts/eval_hybrid_retrieval.py`、`backend/scripts/eval_graph_availability.py`、`backend/scripts/run_agent_eval.py`、`backend/scripts/bench_comparison.py`
+- **评测集**：`backend/scripts/education_testset.json`（37 条）、`education_testset_large.json`（59 条）
 
 ### 前端优化
 
@@ -50,6 +45,21 @@
   - 📉 数据分析图表（Chart.js集成）
 
 ## 快速启动
+
+### 0. 云端 / 容器部署（推荐）
+
+服务器与华为云资源（ECS、RDS、DCS、MaaS）就绪后，按 **[华为云部署指南](docs/DEPLOY_HUAWEI_CLOUD.md)** 操作。最短路径：
+
+```bash
+cd deploy
+cp .env.example .env        # 填写 MaaS 密钥与云资源地址
+bash deploy.sh              # 构建镜像 → 启动 → 健康检查
+bash healthcheck.sh http://<host>
+```
+
+部署包包含 `Dockerfile`、`docker-compose.yml`（Nginx + 应用 + Redis）、`nginx.conf`（已关闭 SSE 缓冲）与环境变量模板。未配置 RDS/DCS/Neo4j 时自动降级为 SQLite/内存会话/JSON 图谱，可在本地先完成演示排练。
+
+> 注意：`backend/data/pro_kb` 由 Git LFS 管理，克隆后需执行 `git lfs install && git lfs pull`，否则 RAG 检索会退化为演示数据（`/health` 会给出提示）。
 
 ### 1. 安装依赖
 
@@ -171,9 +181,11 @@ Invoke-RestMethod -Uri http://127.0.0.1:5000/health | ConvertTo-Json -Depth 5
 
 1. 可选：启动 Redis/Celery（完整异步功能）
 
+> Redis 仅异步任务与会话历史需要，缺省会自动降级为内存模式，可不启动。
+> Windows 下请自行安装 [Redis for Windows](https://github.com/tporadowski/redis/releases) 并监听 6379；Linux/macOS 使用 `redis-server`。
+
 ```powershell
-cd backend
-tools\redis\redis-server.exe tools\redis\redis.windows.conf --port 6379
+redis-server --port 6379
 ```
 
 ```powershell
@@ -243,7 +255,17 @@ python -m unittest tests.test_knowledge_base_graphrag -v
 
 ## 版本迭代时间线（倒序）
 
-### 2026-04-11（当前）
+### 2026-11-13（当前）
+
+- 新增云端部署包：`deploy/Dockerfile`、`docker-compose.yml`、`nginx.conf`、`.env.example`、`deploy.sh`、`healthcheck.sh`。
+- 新增文档：华为云部署指南、参赛作品材料、Demo 演示脚本与文档索引；补齐 MIT 许可证。
+- README 修正失效的文档链接与未标注口径的性能结论，改为引用仓库内可复现的评测报告。
+- 安全加固：匿名请求不再采信任意 `user_id`（仅允许签名访客 ID 认领）；用户 ID 参与文件名时做净化；CORS 改为白名单；调试模式默认关闭；异步任务按归属校验。
+- 数据一致性：注销账号按精确文件名删除；修复 `updatedAt` 时间戳时区偏移；事件长文本列改用 `LONGTEXT`。
+- 智能体：离线兜底不再伪造工具轨迹（统一标记 `local_rule_fallback`）；步骤耗时按工具事件对齐；Redis 不可达时如实上报 `history_backend`；内存会话加 LRU 上限；评测接口默认关闭并修正工具轨迹计分。
+- 前端：图表库 CDN 失败降级；首页防重复提交与重复抽取；判题后广播 `knowledge:updated`；学习计划保存失败回滚；知识库引用按钮改为事件委托；清理 3 个无引用脚本与重复 CDN。
+
+### 2026-04-11
 
 - 工具执行时间线改为真实逐步耗时统计，修复步骤耗时同值问题。
 - 学习计划工具升级为“生成即落盘”：写入 `user_plans` 并记录 `learning_plan` 事件。
@@ -273,8 +295,10 @@ python -m unittest tests.test_knowledge_base_graphrag -v
 
 ## 文档导航
 
-- 前端说明：[frontend/README.md](frontend/README.md)
 - 文档索引：[docs/README.md](docs/README.md)
-- 发布说明模板：[docs/CHANGELOG_TEMPLATE.md](docs/CHANGELOG_TEMPLATE.md)
-- 云端启动：[docs/CLOUD_QUICKSTART.md](docs/CLOUD_QUICKSTART.md)
-- Neo4j 快速接入：[docs/neo4j-quickstart.md](docs/neo4j-quickstart.md)
+- 华为云部署：[docs/DEPLOY_HUAWEI_CLOUD.md](docs/DEPLOY_HUAWEI_CLOUD.md)
+- 云端快速启动：[CLOUD_QUICKSTART.md](CLOUD_QUICKSTART.md)
+- 参赛材料：[docs/COMPETITION_SUBMISSION.md](docs/COMPETITION_SUBMISSION.md)
+- Demo 演示：[docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)
+- 前端说明：[frontend/README.md](frontend/README.md)
+- 许可证：[LICENSE](LICENSE)

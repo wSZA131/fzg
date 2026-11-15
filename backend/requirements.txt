@@ -12,5 +12,8 @@ langchain>=0.2.0,<0.3.0
 langchain-core>=0.2.0,<0.3.0
 langchain-community>=0.2.0,<0.3.0
 langchain-openai>=0.1.0,<0.2.0
+# torch 为 sentence-transformers 的底层依赖；PyPI 默认提供 CPU 版，
+# 本地开发可直接安装，生产镜像请用 deploy/Dockerfile 中的 CPU wheel 源预装
+torch>=2.1.0
 sentence-transformers>=2.2.2
 faiss-cpu>=1.7.4
