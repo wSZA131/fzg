@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <link rel="icon" type="image/svg+xml" href="assets/images/app-icon.svg">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>坊知工</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/pages/home-page.css">
+    <!-- 外部样式统一异步加载：CDN 不可达时只回退字体/公式样式，不阻塞首屏 -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@600;700;900&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@600;700;900&display=swap"></noscript>
+    <link rel="stylesheet" href="assets/css/pages/home-page.css?v=20261114-plan-drawer-v1">
     <link rel="stylesheet" href="assets/css/shared/auth-ui.css?v=20260512-auth-modal-scrollbarhide-v3">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <link rel="preload" as="style" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"></noscript>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
     <style>
@@ -454,6 +458,13 @@
             box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
         }
 
+        .entry-send-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
         .entry-explore {
             max-width: var(--home-explore-max-width);
             margin: 36px auto 0;
@@ -461,9 +472,14 @@
 
         .entry-explore-head {
             display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 20px;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 14px;
+        }
+
+        .entry-explore-heading {
+            min-width: 0;
         }
 
         .entry-explore-title {
@@ -473,28 +489,75 @@
             letter-spacing: -0.02em;
         }
 
+        .entry-explore-subtitle {
+            margin-top: 4px;
+            color: #8b94a3;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
         .entry-explore-refresh {
-            width: 34px;
+            display: inline-flex;
+            flex: 0 0 auto;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
             height: 34px;
-            border: none;
-            border-radius: 999px;
-            background: transparent;
-            color: #6b7280;
-            font-size: 20px;
+            padding: 0 12px;
+            border: 1px solid #e2e5eb;
+            border-radius: 9px;
+            background: #ffffff;
+            color: #5b6170;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 500;
             cursor: pointer;
-            transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease;
+            transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
         }
 
         .entry-explore-refresh:hover {
-            background: #f3f4f6;
-            color: #111827;
-            transform: rotate(18deg);
+            border-color: #d8dbe3;
+            background: #f7f8fa;
+            color: #14161b;
         }
 
         .entry-explore-refresh:disabled {
             opacity: 0.55;
             cursor: wait;
-            transform: none;
+        }
+
+        .entry-explore-filters {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 7px;
+            margin-bottom: 18px;
+        }
+
+        .entry-explore-filter {
+            height: 29px;
+            padding: 0 11px;
+            border: 1px solid #e4e7ed;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #737a88;
+            font-family: inherit;
+            font-size: 11.5px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+        }
+
+        .entry-explore-filter:hover {
+            border-color: #d5d9e1;
+            color: #14161b;
+        }
+
+        .entry-explore-filter.is-active {
+            border-color: #dcd8fb;
+            background: #f1efff;
+            color: #4338ca;
+            font-weight: 600;
         }
 
         .entry-explore-grid {
@@ -518,57 +581,193 @@
             padding: 22px;
         }
 
-        .entry-explore-card {
-            display: block;
-            width: 100%;
-            border: 1px solid #dfe6ee;
-            border-radius: 24px;
-            background: #ffffff;
+        .entry-explore-skeleton {
             overflow: hidden;
-            padding: 0;
-            text-align: left;
-            cursor: pointer;
-            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.06);
+            border: 1px solid #e9ecf1;
+            border-radius: 18px;
+            background: #ffffff;
+        }
+
+        .entry-explore-skeleton-cover {
+            aspect-ratio: 16 / 9;
+            background: linear-gradient(100deg, #f2f4f7 20%, #f8f9fb 40%, #f2f4f7 60%);
+            background-size: 200% 100%;
+            animation: entry-explore-shimmer 1.4s ease-in-out infinite;
+        }
+
+        .entry-explore-skeleton-body {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 14px;
+        }
+
+        .entry-explore-skeleton-body span {
+            display: block;
+            height: 10px;
+            border-radius: 999px;
+            background: #f0f2f5;
+        }
+
+        .entry-explore-skeleton-body span:nth-child(1) {
+            width: 78%;
+        }
+
+        .entry-explore-skeleton-body span:nth-child(2) {
+            width: 100%;
+        }
+
+        .entry-explore-skeleton-body span:nth-child(3) {
+            width: 48%;
+        }
+
+        @keyframes entry-explore-shimmer {
+            0% { background-position: 100% 0; }
+            100% { background-position: -100% 0; }
+        }
+
+        .entry-explore-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            min-width: 0;
+            overflow: hidden;
+            border: 1px solid #e4e7ed;
+            border-radius: 18px;
+            background: #ffffff;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
             transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
         }
 
         .entry-explore-card:hover {
-            transform: translateY(-3px);
-            border-color: #c7d3e4;
-            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+            transform: translateY(-2px);
+            border-color: #d9dce3;
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+        }
+
+        .entry-explore-card-main {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            width: 100%;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            font-family: inherit;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .entry-explore-card-main:focus-visible {
+            outline: 2px solid rgba(79, 70, 229, 0.35);
+            outline-offset: -2px;
         }
 
         .entry-explore-card-cover {
+            position: relative;
             aspect-ratio: 16 / 9;
+            background-color: #f3f4f6;
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
         }
 
-        .entry-explore-card-body {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            padding: 14px 16px 16px;
+        .entry-explore-card-kind {
+            position: absolute;
+            left: 10px;
+            top: 10px;
+            display: inline-flex;
+            align-items: center;
+            height: 22px;
+            padding: 0 8px;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.92);
+            color: #5b6170;
+            font-size: 10px;
+            font-weight: 600;
+            line-height: 1;
+            backdrop-filter: blur(6px);
         }
 
-        .entry-explore-card-play {
-            flex: 0 0 28px;
-            width: 28px;
-            height: 28px;
-            border: 1px solid #d9e1eb;
-            border-radius: 999px;
-            color: #7b8596;
+        .entry-explore-card-kind.is-practice {
+            color: #b45309;
+            background: rgba(255, 247, 237, 0.94);
+        }
+
+        .entry-explore-card-kind.is-explain {
+            color: #4338ca;
+            background: rgba(241, 239, 255, 0.94);
+        }
+
+        .entry-explore-card-kind.is-review {
+            color: #0f766e;
+            background: rgba(240, 253, 250, 0.94);
+        }
+
+        .entry-explore-card-kind.is-external {
+            color: #1d4ed8;
+            background: rgba(239, 246, 255, 0.94);
+        }
+
+        .entry-explore-card-kind.is-material {
+            color: #92400e;
+            background: rgba(255, 251, 235, 0.94);
+        }
+
+        .entry-explore-card-kind.is-course {
+            color: #047857;
+            background: rgba(236, 253, 245, 0.94);
+        }
+
+        .entry-explore-card-kind.is-book {
+            color: #b45309;
+            background: rgba(255, 247, 237, 0.94);
+        }
+
+        .entry-explore-card-kind.is-paper {
+            color: #7e22ce;
+            background: rgba(250, 245, 255, 0.94);
+        }
+
+        .entry-explore-dismiss {
+            position: absolute;
+            right: 8px;
+            top: 8px;
+            z-index: 2;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            font-size: 13px;
-            margin-top: 2px;
+            width: 24px;
+            height: 24px;
+            padding: 0;
+            border: 1px solid rgba(255, 255, 255, 0.72);
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.88);
+            color: #737a88;
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1;
+            cursor: pointer;
+            opacity: 0.55;
+            backdrop-filter: blur(6px);
+            transition: opacity 0.16s ease, background 0.16s ease, color 0.16s ease;
         }
 
-        .entry-explore-card-copy {
-            min-width: 0;
-            flex: 1;
+        .entry-explore-card:hover .entry-explore-dismiss,
+        .entry-explore-dismiss:focus-visible {
+            opacity: 1;
+        }
+
+        .entry-explore-dismiss:hover {
+            background: #ffffff;
+            color: #b42318;
+        }
+
+        .entry-explore-card-body {
+            padding: 13px 14px 6px;
         }
 
         .entry-explore-card-title {
@@ -576,17 +775,71 @@
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
-            font-size: 16px;
-            font-weight: 700;
+            font-size: 14.5px;
+            font-weight: 600;
             color: #262b33;
-            line-height: 1.38;
+            letter-spacing: -0.01em;
+            line-height: 1.42;
+        }
+
+        .entry-explore-card-reason {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            min-height: 35px;
+            margin-top: 6px;
+            overflow: hidden;
+            color: #8b94a3;
+            font-size: 11.5px;
+            line-height: 1.55;
+        }
+
+        .entry-explore-card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-top: auto;
+            padding: 8px 14px 13px;
         }
 
         .entry-explore-card-meta {
-            margin-top: 5px;
-            color: #8b94a3;
-            font-size: 13px;
+            min-width: 0;
+            overflow: hidden;
+            color: #a2a7b4;
+            font-size: 10.5px;
             line-height: 1.4;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .entry-explore-card-cta {
+            flex: 0 0 auto;
+            color: #14161b;
+            font-size: 11.5px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 720px) {
+            .entry-explore-head {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .entry-explore-subtitle {
+                font-size: 11.5px;
+            }
+
+            .entry-explore-refresh {
+                align-self: flex-start;
+            }
+
+            .entry-explore-filters {
+                gap: 6px;
+                margin-bottom: 14px;
+            }
         }
 
         .entry-spaces {
@@ -2925,6 +3178,56 @@
             }
         }
     </style>
+    <style>
+        html,
+        body,
+        .app-container,
+        .navbar,
+        .entry-gateway {
+            background: #ffffff;
+        }
+
+        body.guest-home-layout {
+            background: #ffffff;
+        }
+        .entry-page { max-width: 1240px; }
+        .entry-tools-layout { gap: 22px; }
+        .entry-tools {
+            padding: 18px; border: 1px solid #dce8f2; border-radius: 24px;
+            background: #ffffff; box-shadow: 0 16px 38px rgba(15,23,42,.06);
+        }
+        .entry-tool { min-height: 132px; border-radius: 18px; background: #ffffff; border-color: #e0eaf4; }
+        .entry-tool:hover { border-color: #9dc5e8; box-shadow: 0 16px 34px rgba(15,73,125,.12); }
+        .entry-tool-icon { color: #1168b5; }
+        .entry-tool-title { color: #102c57; }
+        .entry-input-wrap {
+            min-height: 68px; padding: 8px 9px 8px 22px; border: 1px solid #bcd4e8;
+            border-radius: 20px; box-shadow: 0 14px 32px rgba(23,67,103,.12);
+            background: #fff;
+        }
+        .entry-input { font-size: 17px; }
+        .entry-input-wrap::before { content: "提问 / 添加资料"; color: #7190a8; font-size: 12px; position: absolute; transform: translateY(-26px); }
+        .entry-input-wrap { position: relative; }
+        .entry-send-btn { width: 48px; height: 48px; background: #1168d8; }
+        .entry-send-btn:hover { background: #0e51ad; }
+        .entry-explore { margin-top: 42px; }
+        .entry-explore-title::before { content: "✦ "; color: #16a085; }
+        .entry-explore-card { border-radius: 20px; }
+        @media (max-width: 900px) { .entry-input-wrap::before { display:none; } }
+        .entry-example-row {
+            display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+            width: min(100%, var(--entry-content-width)); margin: 18px auto 0;
+        }
+        .entry-example-label { color: #64748b; font-size: 13px; font-weight: 700; }
+        .entry-example-chip {
+            border: 1px solid #dbe5ef; border-radius: 999px; padding: 8px 12px;
+            background: #fff; color: #38536d; font-size: 12px; cursor: pointer;
+            transition: border-color .16s ease, color .16s ease, background .16s ease;
+        }
+        .entry-example-chip:hover { border-color: #9dc5e8; color: #1168b5; background: #f5fbff; }
+    </style>
+    <link rel="stylesheet" href="assets/css/shared/site-theme.css?v=20261114-explore-recs-v1">
+    <link rel="stylesheet" href="assets/css/shared/attachment-ui.css?v=20261113-attachment-v2">
 </head>
 <body>
     <button class="global-sidebar-toggle" id="globalSidebarToggle" type="button" aria-label="打开侧栏" aria-expanded="false">
@@ -2954,13 +3257,22 @@
                 </div>
             </div>
             <div class="global-sidebar-logo">坊知工</div>
-            <a class="global-sidebar-link" data-side-link="index.html" href="index.html">+ 添加内容</a>
-            <a class="global-sidebar-link" data-side-link="chat.html" href="chat.html">◎ 智能问答</a>
-            <a class="global-sidebar-link" data-side-link="question-bank.html" href="question-bank.html">◎ 题库练习</a>
-            <a class="global-sidebar-link" data-side-link="dashboard.html" href="dashboard.html">◧ 学习仪表盘</a>
-            <a class="global-sidebar-link" data-side-link="knowledge-map.html" href="knowledge-map.html">◇ 知识图谱</a>
+            <a class="global-sidebar-link" data-side-link="index.html" href="index.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="st-nav-label">添加内容</span></a>
+            <a class="global-sidebar-link" data-side-link="chat.html" href="chat.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H8l-5 3 1.2-5.1A8.5 8.5 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5Z"/></svg></span><span class="st-nav-label">智能问答</span></a>
+            <a class="global-sidebar-link" data-side-link="question-bank.html" href="question-bank.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12.3l2.6 2.6L16 9.3"/></svg></span><span class="st-nav-label">题库练习</span></a>
+            <a class="global-sidebar-link" data-side-link="dashboard.html" href="dashboard.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></svg></span><span class="st-nav-label">学习仪表盘</span></a>
+            <button class="global-sidebar-link global-sidebar-plan-link" id="entryPlanLauncherBtn" type="button" aria-controls="entryPlanDrawer" aria-expanded="false">
+                <span class="st-nav-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="3.75" y="5.25" width="16.5" height="15" rx="3" stroke="currentColor" stroke-width="1.7"></rect>
+                        <path d="M8 3.5v3.25M16 3.5v3.25M3.75 9.75h16.5M8.25 14.1l2.3 2.3 5-5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                </span>
+                <span class="st-nav-label">学习计划</span>
+                <span class="global-sidebar-plan-count" id="entryPlanNavCount" hidden>0</span>
+            </button>
             <div class="global-sidebar-section">空间</div>
-            <a class="global-sidebar-link" data-side-link="spaces.html" href="spaces.html">◻ 我的空间</a>
+            <a class="global-sidebar-link" data-side-link="spaces.html" href="spaces.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h3.9l2.1 2.6h6.9a2 2 0 0 1 2 2v7.4a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z"/></svg></span><span class="st-nav-label">我的空间</span></a>
         </div>
     </aside>
 
@@ -2982,6 +3294,12 @@
         <section class="entry-gateway" id="entryGateway">
             <div class="entry-heading"><span id="entryHeadingText">你想学什么？</span><span id="entryUserName" hidden>同学</span></div>
             <div class="entry-subheading">上传、链接、粘贴、记录都可以作为学习输入</div>
+            <div class="entry-example-row" aria-label="快速开始示例">
+                <span class="entry-example-label">试试：</span>
+                <button type="button" class="entry-example-chip" data-entry-example="帮我用这份资料整理一份考试复习提纲">整理复习提纲</button>
+                <button type="button" class="entry-example-chip" data-entry-example="用苏格拉底式提问帮我掌握这个知识点">苏格拉底式学习</button>
+                <button type="button" class="entry-example-chip" data-entry-example="根据我的薄弱知识点生成 5 道练习题">生成练习题</button>
+            </div>
 
             <div class="entry-tools-layout">
                 <div class="entry-main-stack">
@@ -3035,129 +3353,108 @@
                     </div>
 
                     <div class="entry-input-wrap">
+                        <button id="entryAttachBtn" class="entry-attach-btn" type="button" title="添加图片或文件" aria-label="添加图片或文件">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                            </svg>
+                        </button>
                         <input id="entryQuestionInput" class="entry-input" type="text" placeholder="学习任何东西">
+                        <input id="entryAttachmentInput" class="entry-file-input" type="file" multiple accept="image/*,application/pdf,.pdf,.doc,.docx,.txt,.md,.markdown,.json,.csv,.tsv,.log,.ppt,.pptx,.xls,.xlsx,audio/*,video/*">
                         <button id="entrySendBtn" class="entry-send-btn" type="button">&#8593;</button>
                     </div>
+                    <div class="entry-attachment-slot" id="entryAttachments" hidden></div>
                 </div>
             </div>
 
+            <section class="entry-recent" id="entryRecentSection" aria-labelledby="entryRecentTitle" hidden>
+                <div class="entry-recent-head">
+                    <div class="entry-recent-title" id="entryRecentTitle">最近使用</div>
+                    <button type="button" class="entry-recent-all" data-shell-open="history">查看全部</button>
+                </div>
+                <div class="entry-recent-list" id="entryRecentList"></div>
+            </section>
+
             <section class="entry-explore" aria-labelledby="entryExploreTitle">
                 <div class="entry-explore-head">
-                    <div class="entry-explore-title" id="entryExploreTitle">探索</div>
-                    <button id="entryExploreRefreshBtn" class="entry-explore-refresh" type="button" aria-label="刷新探索内容">&#8635;</button>
+                    <div class="entry-explore-heading">
+                        <div class="entry-explore-title" id="entryExploreTitle">探索</div>
+                        <div class="entry-explore-subtitle">按你的学习主题，从百科、教材、课程、论文、图书和视频来源补充资源</div>
+                    </div>
+                    <button id="entryExploreRefreshBtn" class="entry-explore-refresh" type="button" aria-label="换一批推荐">&#8635; 换一批</button>
+                </div>
+                <div class="entry-explore-filters" id="entryExploreFilters" role="group" aria-label="推荐类型筛选">
+                    <button type="button" class="entry-explore-filter is-active" data-explore-filter="all">全部</button>
+                    <button type="button" class="entry-explore-filter" data-explore-filter="article">百科</button>
+                    <button type="button" class="entry-explore-filter" data-explore-filter="textbook">教材</button>
+                    <button type="button" class="entry-explore-filter" data-explore-filter="course">课程</button>
+                    <button type="button" class="entry-explore-filter" data-explore-filter="paper">论文</button>
+                    <button type="button" class="entry-explore-filter" data-explore-filter="book">图书</button>
+                    <button type="button" class="entry-explore-filter" data-explore-filter="video">视频</button>
                 </div>
                 <div class="entry-explore-grid" id="recommendation-list">
                     <div class="entry-explore-empty">正在为你准备探索内容...</div>
                 </div>
             </section>
 
-            <div class="entry-workbench-grid">
-                <div class="entry-spaces" id="entrySpacesSection">
-                    <div class="entry-spaces-head">
-                        <div class="entry-spaces-heading">
-                            <div class="entry-spaces-title-row">
-                                <div class="entry-spaces-title">空间</div>
-                                <div class="entry-spaces-toolbar">
-                                    <div class="entry-space-sort-wrap" id="entrySpaceSortWrap">
-                                        <button
-                                            id="entrySpaceSortTrigger"
-                                            class="entry-space-sort-trigger"
-                                            type="button"
-                                            aria-haspopup="menu"
-                                            aria-expanded="false"
-                                            aria-controls="entrySpaceSortMenu"
-                                        >
-                                            <span class="entry-space-sort-current-icon" id="entrySpaceSortCurrentIcon" aria-hidden="true"></span>
-                                            <span class="entry-space-sort-current-label" id="entrySpaceSortCurrentLabel">最新的</span>
-                                            <span class="entry-space-sort-caret" aria-hidden="true">
-                                                <svg viewBox="0 0 16 16" fill="none">
-                                                    <path d="M4 6.5L8 10L12 6.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                </svg>
-                                            </span>
-                                        </button>
-                                        <div class="entry-space-sort-menu" id="entrySpaceSortMenu" role="menu" aria-label="空间排序">
-                                            <button type="button" class="entry-space-sort-option" data-space-sort-option="latest" role="menuitemradio" aria-checked="true">
-                                                <span class="entry-space-sort-option-check" aria-hidden="true">&#10003;</span>
-                                                <span class="entry-space-sort-option-icon" aria-hidden="true">
-                                                    <svg viewBox="0 0 20 20" fill="none">
-                                                        <circle cx="10" cy="10" r="6.75" stroke="currentColor" stroke-width="1.6"></circle>
-                                                        <path d="M10 6.7V10.2L12.45 11.9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    </svg>
-                                                </span>
-                                                <span class="entry-space-sort-option-label">最新的</span>
-                                            </button>
-                                            <button type="button" class="entry-space-sort-option" data-space-sort-option="oldest" role="menuitemradio" aria-checked="false">
-                                                <span class="entry-space-sort-option-check" aria-hidden="true">&#10003;</span>
-                                                <span class="entry-space-sort-option-icon" aria-hidden="true">
-                                                    <svg viewBox="0 0 20 20" fill="none">
-                                                        <rect x="3.25" y="4.25" width="13.5" height="12.5" rx="2.25" stroke="currentColor" stroke-width="1.6"></rect>
-                                                        <path d="M6.5 2.75V5.75M13.5 2.75V5.75M3.25 8.25H16.75" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
-                                                    </svg>
-                                                </span>
-                                                <span class="entry-space-sort-option-label">最旧的</span>
-                                            </button>
-                                            <button type="button" class="entry-space-sort-option" data-space-sort-option="name-asc" role="menuitemradio" aria-checked="false">
-                                                <span class="entry-space-sort-option-check" aria-hidden="true">&#10003;</span>
-                                                <span class="entry-space-sort-option-icon" aria-hidden="true">
-                                                    <svg viewBox="0 0 20 20" fill="none">
-                                                        <path d="M4 15.5V4.5M4 15.5L1.75 13.25M4 15.5L6.25 13.25M10 5H17M10 9H15M10 13H13" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    </svg>
-                                                </span>
-                                                <span class="entry-space-sort-option-label">名称 A-Z</span>
-                                            </button>
-                                            <button type="button" class="entry-space-sort-option" data-space-sort-option="name-desc" role="menuitemradio" aria-checked="false">
-                                                <span class="entry-space-sort-option-check" aria-hidden="true">&#10003;</span>
-                                                <span class="entry-space-sort-option-icon" aria-hidden="true">
-                                                    <svg viewBox="0 0 20 20" fill="none">
-                                                        <path d="M4 4.5V15.5M4 4.5L1.75 6.75M4 4.5L6.25 6.75M10 5H17M10 9H15M10 13H13" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                    </svg>
-                                                </span>
-                                                <span class="entry-space-sort-option-label">名称 Z-A</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="entry-spaces-subtitle">点击卡片进入空间，悬浮后可编辑或删除</div>
+        </section>
+
+        <aside class="entry-plan-drawer" id="entryPlanDrawer" aria-hidden="true" aria-label="学习计划">
+            <div class="entry-plan-drawer-shell">
+                <header class="entry-plan-drawer-head">
+                    <button class="entry-plan-drawer-close" id="entryPlanDrawerClose" type="button" aria-label="关闭学习计划">×</button>
+                    <div class="entry-plan-drawer-tab"><i aria-hidden="true"></i><span>学习计划</span></div>
+                    <span class="entry-plan-drawer-date" id="entryPlanDrawerDate">今天</span>
+                </header>
+
+                <div class="entry-plan-drawer-body">
+                    <section class="entry-plan-intro">
+                        <span class="entry-plan-eyebrow">DAILY PLAN</span>
+                        <h2>今天，先完成这几件事</h2>
+                        <p>把任务拆成小时间块，完成后勾选，进度会自动同步。</p>
+                    </section>
+
+                    <div class="entry-plan-progress" aria-label="今日计划进度">
+                        <div><strong id="entryPlanDoneCount">0</strong><span>已完成</span></div>
+                        <div><strong id="entryPlanTotalCount">0</strong><span>今日任务</span></div>
+                        <div><strong id="entryPlanRemainingCount">0</strong><span>待完成</span></div>
+                    </div>
+
+                    <section class="entry-plan-add-card">
+                        <div class="entry-plan-section-head">
+                            <h3>添加计划</h3>
+                            <span>时间 + 任务</span>
                         </div>
-                    </div>
-                    <div class="entry-space-grid" id="entrySpaceGrid"></div>
-                </div>
-
-                <div class="entry-plan-board" id="entryPlanBoard">
-                    <div class="entry-plan-head">
-                        <div>
-                            <div class="entry-plan-title">学习计划</div>
-                            <div class="entry-plan-subtitle">把今天要完成的内容拆成清晰的时间块</div>
+                        <div class="add-plan entry-plan-form">
+                            <input id="new-plan-time" type="time" aria-label="计划时间">
+                            <input id="new-plan-task" type="text" placeholder="例如：整理纺织材料性能笔记" aria-label="学习任务">
+                            <button id="add-plan-btn" type="button">添加计划</button>
+                            <div class="entry-plan-form-status" id="entryPlanFormStatus" role="status" aria-live="polite" hidden></div>
                         </div>
-                        <div class="entry-plan-chip">今日安排</div>
-                    </div>
+                    </section>
 
-                    <!-- <div class="entry-plan-note">
-                        建议先排 2 到 4 个最重要的小任务，做完后直接勾选，右下方会同步提示需要优先复习的知识点。
-                    </div> -->
+                    <section class="entry-plan-tasks">
+                        <div class="entry-plan-section-head">
+                            <h3>今日任务</h3>
+                            <span id="entryPlanListMeta">0 项</span>
+                        </div>
+                        <div class="entry-plan-list" id="plan-list" aria-live="polite">
+                            <div class="review-reminder-loading">加载中...</div>
+                        </div>
+                    </section>
 
-                    <div class="add-plan entry-plan-form">
-                        <input id="new-plan-time" type="time" aria-label="计划时间">
-                        <input id="new-plan-task" type="text" placeholder="例如：19:30 整理纺织材料性能笔记" aria-label="学习任务">
-                        <button id="add-plan-btn" type="button">添加计划</button>
-                    </div>
-
-                    <div class="entry-plan-section-label">今日任务</div>
-                    <div class="entry-plan-list" id="plan-list" aria-live="polite">
-                        <div class="review-reminder-loading">加载中...</div>
-                    </div>
-
-                    <div class="entry-plan-reminders">
-                        <div class="entry-plan-reminders-title">复习提醒</div>
-                        <div class="entry-plan-reminders-subtitle">结合掌握度，把今天更该回看的内容先排出来</div>
+                    <section class="entry-plan-review-card">
+                        <div class="entry-plan-section-head">
+                            <h3>复习提醒</h3>
+                            <span>按掌握度</span>
+                        </div>
+                        <p class="entry-plan-review-note">结合掌握度，把今天更该回看的内容先排出来。</p>
                         <div class="entry-plan-reminder-list" id="review-reminder-list">
                             <div class="review-reminder-loading">加载中...</div>
                         </div>
-                    </div>
+                    </section>
                 </div>
             </div>
-        </section>
+        </aside>
 
         <!-- 主内容区 -->
         <div class="main-content">
@@ -3380,7 +3677,8 @@
     <script src="assets/js/shared/project-local-data.js?v=20260330-authfix"></script>
     <script src="assets/js/shared/space-cloud-store.js?v=20260403-sidebarspaces"></script>
     <script src="assets/js/shared/auth-ui.js?v=20260512-auth-register-autofill-fix"></script>
-    <script src="assets/js/shared/page-shell.js?v=20260416-streak-dock"></script>
+    <script src="assets/js/shared/page-shell.js?v=20261113-graph-merge"></script>
+    <script src="assets/js/shared/attachment-handoff.js?v=20261113-attachment-v1"></script>
     <script>
         const API_BASE = window.ApiUtils.getApiBase();
         const MAX_CHAT_SESSIONS = 20;
@@ -3417,6 +3715,8 @@
         let activeSpaceItemRef = null;
         let aiContextItems = [];
         let aiPendingExternalFiles = [];
+        let pendingEntryAttachments = [];
+        const MAX_ENTRY_ATTACHMENTS = 6;
         const ENTRY_ACTION_CREATE_SPACE_VALUE = '__create_new_space__';
         const ENTRY_SPACE_SYNC_KEY = 'fangzhigong_space_sync';
         const TEXT_FILE_EXTENSIONS = ['.txt', '.md', '.markdown', '.json', '.csv', '.tsv', '.js', '.ts', '.py', '.java', '.c', '.cpp', '.html', '.htm', '.css', '.xml'];
@@ -4661,11 +4961,9 @@
         }
 
         async function initEntrySpacesUI() {
-            const section = document.getElementById('entrySpacesSection');
             const sortTrigger = document.getElementById('entrySpaceSortTrigger');
             const sortMenu = document.getElementById('entrySpaceSortMenu');
             const { select, trigger, menu } = getEntryActionSpaceInputState();
-            if (!section) return;
 
             await refreshEntrySpacesUI();
 
@@ -4723,7 +5021,7 @@
                 select.dataset.bound = '1';
             }
 
-            if (!section.dataset.menuBound) {
+            if (!document.body.dataset.entrySpacesMenusBound) {
                 document.addEventListener('click', function (event) {
                     if (isEntrySpaceSortMenuOpen && !event.target.closest('#entrySpaceSortWrap')) {
                         closeEntrySpaceSortMenu();
@@ -4762,7 +5060,7 @@
                         refreshEntrySpacesUI().catch(function () {});
                     }
                 });
-                section.dataset.menuBound = '1';
+                document.body.dataset.entrySpacesMenusBound = '1';
             }
         }
 
@@ -5189,6 +5487,188 @@
             }
         }
 
+        function formatEntryAttachmentSize(bytes) {
+            const size = Math.max(0, Number(bytes) || 0);
+            if (size < 1024) return `${size} B`;
+            if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
+            return `${(size / 1024 / 1024).toFixed(1)} MB`;
+        }
+
+        function getEntryAttachmentKindLabel(kind) {
+            if (kind === 'image') return '图片';
+            if (kind === 'pdf') return 'PDF';
+            if (kind === 'note') return '文本';
+            if (kind === 'audio') return '音频';
+            if (kind === 'video') return '视频';
+            return '文件';
+        }
+
+        function getEntryAttachmentReadHint(kind) {
+            if (kind === 'image') return '发送后自动 OCR 识别图片内容';
+            if (kind === 'pdf') return '发送后提取 PDF 文本片段';
+            if (kind === 'note') return '发送后读取文本内容';
+            return '发送后附带文件元信息';
+        }
+
+        function getEntryAttachmentThumbLabel(attachment) {
+            const ext = String(attachment && attachment.name || '').split('.').pop().toUpperCase();
+            if (attachment.kind === 'pdf') return 'PDF';
+            if (attachment.kind === 'note') {
+                if (ext === 'MARKDOWN') return 'MD';
+                return ext.slice(0, 4) || 'TXT';
+            }
+            if (attachment.kind === 'audio') return '音频';
+            if (attachment.kind === 'video') return '视频';
+            return ext.slice(0, 4) || '文件';
+        }
+
+        function getEntryAttachmentBadge(attachment) {
+            if (attachment.kind === 'image') return { text: '图片 · OCR', isOcr: true };
+            if (attachment.kind === 'pdf') return { text: 'PDF · 解析', isOcr: false };
+            if (attachment.kind === 'note') return { text: '文本', isOcr: false };
+            return { text: getEntryAttachmentKindLabel(attachment.kind), isOcr: false };
+        }
+
+        function buildEntryAttachmentSignature(file) {
+            return [
+                String(file && file.name || ''),
+                Number(file && file.size || 0),
+                Number(file && file.lastModified || 0)
+            ].join('::');
+        }
+
+        function normalizeEntryAttachment(file) {
+            const mime = String(file && file.type || '').toLowerCase();
+            const lowerName = String(file && file.name || '').toLowerCase();
+            const kind = inferEntryUploadKind(mime, lowerName);
+            const previewUrl = kind === 'image' && window.URL && typeof window.URL.createObjectURL === 'function'
+                ? window.URL.createObjectURL(file)
+                : '';
+            return {
+                id: `entry_attach_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                signature: buildEntryAttachmentSignature(file),
+                file: file,
+                name: String(file && file.name || '未命名文件'),
+                mime: mime,
+                size: Number(file && file.size || 0),
+                kind: kind,
+                previewUrl: previewUrl
+            };
+        }
+
+        function releaseEntryAttachmentPreview(attachment) {
+            if (!attachment || !attachment.previewUrl) return;
+            try {
+                window.URL.revokeObjectURL(attachment.previewUrl);
+            } catch (error) {
+                // 忽略预览地址释放失败。
+            }
+            attachment.previewUrl = '';
+        }
+
+        function clearEntryAttachments() {
+            pendingEntryAttachments.forEach(releaseEntryAttachmentPreview);
+            pendingEntryAttachments = [];
+            const input = document.getElementById('entryAttachmentInput');
+            if (input) input.value = '';
+            renderEntryAttachments();
+        }
+
+        function addEntryAttachments(files) {
+            const next = pendingEntryAttachments.slice();
+            const seen = new Set(next.map(item => item.signature));
+            let ignoredCount = 0;
+
+            Array.from(files || []).forEach(file => {
+                if (!(file instanceof File)) return;
+                if (next.length >= MAX_ENTRY_ATTACHMENTS) {
+                    ignoredCount += 1;
+                    return;
+                }
+                const normalized = normalizeEntryAttachment(file);
+                if (seen.has(normalized.signature)) {
+                    releaseEntryAttachmentPreview(normalized);
+                    ignoredCount += 1;
+                    return;
+                }
+                seen.add(normalized.signature);
+                next.push(normalized);
+            });
+
+            pendingEntryAttachments = next;
+            renderEntryAttachments();
+
+            if (ignoredCount > 0) {
+                window.alert(`一次最多添加 ${MAX_ENTRY_ATTACHMENTS} 个附件，重复或超出的文件已忽略。`);
+            }
+        }
+
+        function removeEntryAttachment(attachmentId) {
+            const target = pendingEntryAttachments.find(item => item.id === attachmentId);
+            releaseEntryAttachmentPreview(target);
+            pendingEntryAttachments = pendingEntryAttachments.filter(item => item.id !== attachmentId);
+            renderEntryAttachments();
+        }
+
+        function renderEntryAttachments() {
+            const container = document.getElementById('entryAttachments');
+            if (!container) return;
+
+            if (!pendingEntryAttachments.length) {
+                container.hidden = true;
+                container.innerHTML = '';
+                return;
+            }
+
+            const cards = pendingEntryAttachments.map(attachment => {
+                const badge = getEntryAttachmentBadge(attachment);
+                const thumb = attachment.kind === 'image' && attachment.previewUrl
+                    ? `<div class="attachment-thumb"><img class="attachment-thumb-img" src="${escapeHtml(attachment.previewUrl)}" alt=""></div>`
+                    : `<div class="attachment-thumb is-${escapeHtml(attachment.kind)}">${escapeHtml(getEntryAttachmentThumbLabel(attachment))}</div>`;
+                const tooltip = `${attachment.name} · ${getEntryAttachmentReadHint(attachment.kind)}`;
+                return `
+                    <div class="attachment-card" title="${escapeHtml(tooltip)}">
+                        ${thumb}
+                        <div class="attachment-info">
+                            <div class="attachment-name">${escapeHtml(attachment.name)}</div>
+                            <div class="attachment-meta">
+                                <span class="attachment-badge ${badge.isOcr ? 'is-ocr' : ''}">${escapeHtml(badge.text)}</span>
+                                <span>${escapeHtml(formatEntryAttachmentSize(attachment.size))}</span>
+                            </div>
+                        </div>
+                        <button type="button" class="attachment-remove" data-entry-remove-attachment="${escapeHtml(attachment.id)}" aria-label="移除附件">×</button>
+                    </div>
+                `;
+            }).join('');
+
+            container.hidden = false;
+            container.innerHTML = `
+                <div class="attachment-strip">
+                    <div class="attachment-strip-head">
+                        <div class="attachment-strip-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                            </svg>
+                            <span>附件 ${pendingEntryAttachments.length}</span>
+                            <span class="attachment-strip-hint">发送时自动读取</span>
+                        </div>
+                        <button type="button" class="attachment-strip-clear" data-entry-clear-attachments>全部移除</button>
+                    </div>
+                    <div class="attachment-grid">${cards}</div>
+                </div>
+            `;
+
+            container.querySelectorAll('[data-entry-remove-attachment]').forEach(button => {
+                button.addEventListener('click', function () {
+                    removeEntryAttachment(this.getAttribute('data-entry-remove-attachment'));
+                });
+            });
+            const clearButton = container.querySelector('[data-entry-clear-attachments]');
+            if (clearButton) {
+                clearButton.addEventListener('click', clearEntryAttachments);
+            }
+        }
+
         function initEntryGateway() {
             const entryInput = document.getElementById('entryQuestionInput');
             const entrySendBtn = document.getElementById('entrySendBtn');
@@ -5199,6 +5679,7 @@
             const entryPasteTool = document.getElementById('entryToolPaste');
             const entryRecordTool = document.getElementById('entryToolRecord');
             const entryExploreRefreshBtn = document.getElementById('entryExploreRefreshBtn');
+            const entryExampleChips = document.querySelectorAll('[data-entry-example]');
 
             if (!entryInput || !entrySendBtn) {
                 document.body.classList.add('chat-open');
@@ -5227,7 +5708,7 @@
                 }
             };
 
-            const buildChatPageHref = (questionText) => {
+            const buildChatPageHref = (questionText, handoffId) => {
                 const target = new URL('chat.html', window.location.href);
                 const current = new URL(window.location.href);
                 const apiBase = current.searchParams.get('api_base');
@@ -5236,6 +5717,9 @@
                 }
                 if (questionText) {
                     target.searchParams.set('q', questionText);
+                }
+                if (handoffId) {
+                    target.searchParams.set('handoff', handoffId);
                 }
                 return target.toString();
             };
@@ -5262,19 +5746,70 @@
                 return false;
             };
 
-            const submitEntryQuestion = () => {
+            const submitEntryQuestion = async () => {
+                if (entrySendBtn.disabled) return;
                 const q = entryInput.value.trim();
-                if (!q) return;
-                entryInput.value = '';
-                window.location.href = buildChatPageHref(q);
+                const attachments = pendingEntryAttachments.slice();
+                if (!q && !attachments.length) return;
+
+                if (attachments.length && (!window.AttachmentHandoff || !window.AttachmentHandoff.isSupported)) {
+                    window.alert('当前浏览器不支持附件发送，请改用智能问答页上传。');
+                    return;
+                }
+
+                const rawSendLabel = entrySendBtn.textContent;
+                entrySendBtn.disabled = true;
+                entrySendBtn.textContent = '…';
+                try {
+                    let handoffId = '';
+                    if (attachments.length) {
+                        handoffId = await window.AttachmentHandoff.save(
+                            attachments.map(item => item.file),
+                            q
+                        );
+                        if (!handoffId) {
+                            throw new Error('附件保存失败');
+                        }
+                    }
+
+                    entryInput.value = '';
+                    clearEntryAttachments();
+                    window.location.href = buildChatPageHref(q, handoffId);
+                } catch (error) {
+                    window.alert(`附件发送失败：${error && error.message ? error.message : '请稍后重试'}`);
+                } finally {
+                    entrySendBtn.disabled = false;
+                    entrySendBtn.textContent = rawSendLabel;
+                }
             };
 
             entrySendBtn.addEventListener('click', submitEntryQuestion);
+
+            const entryAttachBtn = document.getElementById('entryAttachBtn');
+            const entryAttachmentInput = document.getElementById('entryAttachmentInput');
+            if (entryAttachBtn && entryAttachmentInput && !entryAttachBtn.dataset.bound) {
+                entryAttachBtn.dataset.bound = '1';
+                entryAttachBtn.addEventListener('click', function () {
+                    entryAttachmentInput.click();
+                });
+                entryAttachmentInput.addEventListener('change', function () {
+                    addEntryAttachments(entryAttachmentInput.files);
+                    entryAttachmentInput.value = '';
+                });
+            }
+            renderEntryAttachments();
             entryInput.addEventListener('keypress', function (e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     submitEntryQuestion();
                 }
+            });
+
+            entryExampleChips.forEach(function (chip) {
+                chip.addEventListener('click', function () {
+                    entryInput.value = chip.getAttribute('data-entry-example') || '';
+                    entryInput.focus();
+                });
             });
 
             if (entryUploadTool) {
@@ -5305,10 +5840,12 @@
                 });
             }
 
+            bindExploreFilterControls();
+
             if (entryExploreRefreshBtn && !entryExploreRefreshBtn.dataset.bound) {
                 entryExploreRefreshBtn.dataset.bound = 'true';
                 entryExploreRefreshBtn.addEventListener('click', function () {
-                    loadRecommendations();
+                    loadRecommendations({ refresh: true });
                 });
             }
 
@@ -5895,130 +6432,6 @@
             }
         }
 
-        const DEFAULT_EXPLORE_ITEMS = [
-            {
-                concept: '纤维材料基础',
-                title: '纤维材料基础',
-                reason: '先建立纤维分类、性能与典型应用的整体认知',
-                resource_type: '概念梳理',
-                recommend_time: '约 18 分钟',
-                strategy_tags: ['style:visual']
-            },
-            {
-                concept: '织物组织与结构',
-                title: '织物组织与结构',
-                reason: '从平纹、斜纹到缎纹，快速建立织物组织图谱',
-                resource_type: '概念梳理',
-                recommend_time: '约 15 分钟',
-                strategy_tags: ['style:visual']
-            },
-            {
-                concept: '染整工艺路线图',
-                title: '染整工艺路线图',
-                reason: '把前处理、染色、整理的关键步骤串成完整流程',
-                resource_type: '流程拆解',
-                recommend_time: '约 22 分钟',
-                strategy_tags: ['style:auditory']
-            },
-            {
-                concept: '纺纱流程总览',
-                title: '纺纱流程总览',
-                reason: '按清花、梳棉、并条、粗纱、细纱建立工序认知',
-                resource_type: '流程拆解',
-                recommend_time: '约 20 分钟',
-                strategy_tags: ['style:kinesthetic']
-            },
-            {
-                concept: '纺织测试与质量控制',
-                title: '纺织测试与质量控制',
-                reason: '了解强力、色牢度和尺寸稳定性的核心检测指标',
-                resource_type: '复盘巩固',
-                recommend_time: '约 16 分钟',
-                strategy_tags: ['style:visual']
-            },
-            {
-                concept: '经编与纬编入门',
-                title: '经编与纬编入门',
-                reason: '用结构对比的方式快速分清针织的两大主线',
-                resource_type: '概念梳理',
-                recommend_time: '约 14 分钟',
-                strategy_tags: ['style:visual']
-            },
-            {
-                concept: 'AI 在纺织中的应用',
-                title: 'AI 在纺织中的应用',
-                reason: '从缺陷检测到智能排产，梳理 AI 的实际落地方向',
-                resource_type: '拓展应用',
-                recommend_time: '约 24 分钟',
-                strategy_tags: ['style:auditory']
-            },
-            {
-                concept: '功能性面料设计',
-                title: '功能性面料设计',
-                reason: '把防水、透湿、抗菌等功能整理路线串起来看',
-                resource_type: '拓展应用',
-                recommend_time: '约 19 分钟',
-                strategy_tags: ['style:kinesthetic']
-            }
-        ];
-
-        const LOGIN_EXPLORE_IMAGE_POOL = [
-            'assets/images/explore/login-explore-01.png',
-            'assets/images/explore/login-explore-02.png',
-            'assets/images/explore/login-explore-03.png',
-            'assets/images/explore/login-explore-04.png',
-            'assets/images/explore/login-explore-05.png',
-            'assets/images/explore/login-explore-06.png',
-            'assets/images/explore/login-explore-07.png',
-            'assets/images/explore/login-explore-08.png'
-        ];
-
-        const NEURAL_NETWORK_EXPLORE_URL = 'https://www.bilibili.com/video/BV1atCRYsE7x/?spm_id_from=333.337.search-card.all.click';
-
-        function normalizeExploreTopicKey(value) {
-            return String(value || '')
-                .trim()
-                .replace(/\s+/g, '')
-                .replace(/[·•,，。:：;；!！?？'"“”‘’()（）\-_/]/g, '')
-                .toLowerCase();
-        }
-
-        const EXPLORE_ITEM_PRESETS = [
-            {
-                keys: ['纤维材料基础'],
-                cover: 'assets/images/explore/fiber-materials.png'
-            },
-            {
-                keys: ['织物组织与结构', '组织物与结构'],
-                cover: 'assets/images/explore/fabric-structure.png',
-                external_url: 'https://www.bilibili.com/video/BV1wR4y1A7Q1/?vd_source=6b840171326f6ef9ba47a1a2da6c442b'
-            },
-            {
-                keys: ['染整工艺路线图'],
-                cover: 'assets/images/explore/dyeing-finishing-process.png'
-            },
-            {
-                keys: ['纺纱流程总览'],
-                cover: 'assets/images/explore/spinning-process.png'
-            },
-            {
-                keys: ['纺织测试与质量控制'],
-                cover: 'assets/images/explore/textile-testing-quality-control.png'
-            },
-            {
-                keys: ['经编与纬编入门'],
-                cover: 'assets/images/explore/warp-knit-weft-knit.png'
-            },
-            {
-                keys: ['AI 在纺织中的应用', 'ai在纺织中的应用'],
-                cover: 'assets/images/explore/ai-in-textiles.png'
-            },
-            {
-                keys: ['功能性面料设计'],
-                cover: 'assets/images/explore/functional-fabric-design.png'
-            }
-        ];
-
         const EXPLORE_ART_PALETTES = [
             { start: '#0f172a', end: '#1d4ed8', accent: '#7dd3fc', glow: '#bfdbfe', text: '#ffffff' },
             { start: '#0b3b66', end: '#0ea5e9', accent: '#c4b5fd', glow: '#67e8f9', text: '#ffffff' },
@@ -6049,7 +6462,7 @@
             if (window.ApiUtils && typeof window.ApiUtils.normalizeRecommendationResourceType === 'function') {
                 return window.ApiUtils.normalizeRecommendationResourceType(raw);
             }
-            return raw || '概念梳理';
+            return raw || '开放资源';
         }
 
         function splitExploreTitle(text) {
@@ -6068,68 +6481,7 @@
             return EXPLORE_ART_PALETTES[seed % EXPLORE_ART_PALETTES.length];
         }
 
-        function getExploreItemPreset(item) {
-            const candidates = [
-                item && item.title,
-                item && item.concept
-            ].map(normalizeExploreTopicKey).filter(Boolean);
-
-            if (!candidates.length) return null;
-
-            for (let i = 0; i < EXPLORE_ITEM_PRESETS.length; i += 1) {
-                const preset = EXPLORE_ITEM_PRESETS[i];
-                const keys = Array.isArray(preset.keys) ? preset.keys : [];
-                const matched = keys.some(function (key) {
-                    return candidates.includes(normalizeExploreTopicKey(key));
-                });
-                if (matched) return preset;
-            }
-
-            return null;
-        }
-
-        function isAuthenticatedExploreView() {
-            return !!(
-                window.UserContext &&
-                typeof window.UserContext.isAuthenticated === 'function' &&
-                window.UserContext.isAuthenticated()
-            );
-        }
-
-        function getLoginExploreArtwork(index) {
-            if (!LOGIN_EXPLORE_IMAGE_POOL.length) return '';
-            const safeIndex = Math.abs(Number(index) || 0) % LOGIN_EXPLORE_IMAGE_POOL.length;
-            return LOGIN_EXPLORE_IMAGE_POOL[safeIndex];
-        }
-
-        function isNeuralNetworkExploreItem(item) {
-            const candidates = [
-                item && item.title,
-                item && item.concept
-            ].map(normalizeExploreTopicKey).filter(Boolean);
-
-            return candidates.some(function (value) {
-                return value.includes('神经网络') || value.includes('人工神经网络') || value.includes('neuralnetwork');
-            });
-        }
-
-        function resolveExploreExternalUrl(item, preset) {
-            const configuredUrl = String(
-                (item && (item.external_url || item.url || item.href)) ||
-                (preset && preset.external_url) ||
-                ''
-            ).trim();
-
-            if (configuredUrl) return configuredUrl;
-            if (isNeuralNetworkExploreItem(item)) return NEURAL_NETWORK_EXPLORE_URL;
-            return '';
-        }
-
         function buildExploreArtwork(item) {
-            const preset = getExploreItemPreset(item);
-            if (preset && preset.cover) {
-                return preset.cover;
-            }
             const palette = getExplorePalette(item || {});
             const title = String((item && (item.concept || item.title)) || '探索主题').replace(/\s*-\s*.+$/, '');
             const titleLines = splitExploreTitle(title);
@@ -6170,116 +6522,391 @@
         }
 
         function getExploreArtwork(item, index) {
-            if (isAuthenticatedExploreView()) {
-                const loginArtwork = getLoginExploreArtwork(index);
-                if (loginArtwork) return loginArtwork;
-            }
+            const configuredCover = String((item && item.cover_url) || '').trim();
+            if (configuredCover) return configuredCover;
             return buildExploreArtwork(item);
         }
 
-        function getFallbackExploreItems() {
-            return DEFAULT_EXPLORE_ITEMS.map(function (item) {
-                return Object.assign({}, item);
-            });
+        const exploreRecommendationState = {
+            items: [],
+            filter: 'all',
+            seenImpressions: new Set(),
+            pendingImpressions: [],
+            impressionTimer: 0,
+            observer: null,
+            loading: false
+        };
+
+        const EXPLORE_FILTER_KINDS = {
+            article: ['open_article'],
+            textbook: ['open_textbook'],
+            course: ['open_lesson'],
+            paper: ['open_paper'],
+            book: ['external_book'],
+            video: ['open_video']
+        };
+
+        const EXPLORE_KIND_LABELS = {
+            open_article: '百科',
+            open_textbook: '教材',
+            open_lesson: '课程',
+            open_paper: '论文',
+            external_book: '图书',
+            open_video: '视频'
+        };
+
+        const EXPLORE_ACTION_LABELS = {
+            open_article: '去阅读',
+            open_textbook: '去学习',
+            open_lesson: '去上课',
+            open_paper: '去阅读',
+            external_book: '去查看',
+            open_video: '看视频'
+        };
+
+        const EXPLORE_DIFFICULTY_LABELS = {
+            easy: '简单',
+            medium: '中等',
+            hard: '困难'
+        };
+
+        function normalizeExploreKind(item) {
+            const raw = String((item && item.resource_kind) || '').trim().toLowerCase();
+            if (EXPLORE_KIND_LABELS[raw]) return raw;
+            const label = String((item && item.resource_type) || '');
+            if (label.includes('视频')) return 'open_video';
+            if (label.includes('教材')) return 'open_textbook';
+            if (label.includes('课程')) return 'open_lesson';
+            if (label.includes('论文')) return 'open_paper';
+            if (label.includes('图书')) return 'external_book';
+            if (label.includes('阅读') || label.includes('百科') || label.includes('拓展')) return 'open_article';
+            return '';
         }
 
         function normalizeExploreItems(items) {
-            const merged = [];
+            const normalized = [];
             const seen = new Set();
-            const sourceGroups = [
-                Array.isArray(items) ? items : [],
-                getFallbackExploreItems()
-            ];
+            (Array.isArray(items) ? items : []).forEach(function (source, index) {
+                if (!source || typeof source !== 'object') return;
+                const item = Object.assign({}, source);
+                const concept = String(item.concept || item.title || '').trim();
+                const title = String(item.title || concept || '探索主题').trim();
+                const kind = normalizeExploreKind(item);
+                if (!kind) return;
+                const key = String(item.id || `${concept}|${kind}|${index}`).trim();
+                if (!key || seen.has(key)) return;
+                seen.add(key);
 
-            sourceGroups.forEach(function (group) {
-                group.forEach(function (item) {
-                    const key = normalizeExploreTopicKey((item && (item.concept || item.title)) || '');
-                    if (!key || seen.has(key)) return;
-                    seen.add(key);
-                    merged.push(Object.assign({}, item));
-                });
+                const action = item.action && typeof item.action === 'object'
+                    ? Object.assign({}, item.action)
+                    : {};
+                if (action.type && action.type !== 'external_course') return;
+                const externalUrl = String(action.url || item.external_url || item.url || item.href || '').trim();
+                if (!externalUrl) return;
+                action.type = 'external_course';
+                action.url = externalUrl;
+                action.concept = String(action.concept || concept || title).trim();
+
+                item.id = key;
+                item.concept = concept || title;
+                item.title = title;
+                item.resource_kind = kind;
+                item.provider = String(item.provider || '开放资源');
+                const parsedDuration = Number(item.duration_minutes);
+                item.duration_minutes = Number.isFinite(parsedDuration)
+                    ? Math.max(0, parsedDuration)
+                    : (parseInt(String(item.recommend_time || '').replace(/[^\d]/g, ''), 10) || 0);
+                item.difficulty = String(item.difficulty || 'medium').toLowerCase();
+                item.cover_url = String(item.cover_url || '');
+                item.action = action;
+                item.resource_action_label = String(item.resource_action_label || EXPLORE_ACTION_LABELS[kind] || '去学习');
+                item.reason = String(item.reason || '').trim();
+                normalized.push(item);
             });
-
-            return merged.slice(0, 8);
+            return normalized.slice(0, 8);
         }
 
-        function renderExploreCards(items) {
-            const list = document.getElementById('recommendation-list');
-            const entryInput = document.getElementById('entryQuestionInput');
-            if (!list) return;
+        function getExploreVisibleItems() {
+            const filter = exploreRecommendationState.filter;
+            if (filter === 'all') return exploreRecommendationState.items;
+            const allowedKinds = EXPLORE_FILTER_KINDS[filter] || [];
+            return exploreRecommendationState.items.filter(function (item) {
+                return allowedKinds.includes(item.resource_kind);
+            });
+        }
 
-            const safeItems = normalizeExploreItems(items);
-            if (!safeItems.length) {
-                list.innerHTML = '<div class="entry-explore-empty">还没有可展示的探索内容，先输入一个你想学的主题吧。</div>';
+        function renderExploreLoading() {
+            const list = document.getElementById('recommendation-list');
+            if (!list) return;
+            if (exploreRecommendationState.observer) {
+                exploreRecommendationState.observer.disconnect();
+                exploreRecommendationState.observer = null;
+            }
+            list.innerHTML = Array.from({ length: 4 }).map(function () {
+                return `
+                    <div class="entry-explore-skeleton" aria-hidden="true">
+                        <div class="entry-explore-skeleton-cover"></div>
+                        <div class="entry-explore-skeleton-body">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderExploreEmpty(message) {
+            const list = document.getElementById('recommendation-list');
+            if (!list) return;
+            list.innerHTML = `<div class="entry-explore-empty">${escapeHtml(message)}</div>`;
+            if (exploreRecommendationState.observer) {
+                exploreRecommendationState.observer.disconnect();
+                exploreRecommendationState.observer = null;
+            }
+        }
+
+        function buildExploreCardHtml(item, index) {
+            const kind = item.resource_kind;
+            const kindClass = kind === 'open_lesson' ? 'is-course'
+                : (kind === 'open_paper' ? 'is-paper'
+                    : (kind === 'external_book' ? 'is-book' : 'is-external'));
+            const metaParts = [
+                item.duration_minutes ? `${item.duration_minutes} 分钟` : '',
+                EXPLORE_DIFFICULTY_LABELS[item.difficulty] || '',
+                item.provider || ''
+            ].filter(Boolean);
+            return `
+                <article class="entry-explore-card" data-explore-card="${escapeHtml(item.id)}">
+                    <button type="button" class="entry-explore-card-main" data-explore-action="${escapeHtml(item.id)}" data-explore-position="${index}">
+                        <div class="entry-explore-card-cover" style="background-image: url('${escapeHtml(getExploreArtwork(item, index))}');">
+                            <span class="entry-explore-card-kind ${kindClass}">${escapeHtml(EXPLORE_KIND_LABELS[kind] || '推荐')}</span>
+                        </div>
+                        <div class="entry-explore-card-body">
+                            <div class="entry-explore-card-title">${escapeHtml(item.title)}</div>
+                            <div class="entry-explore-card-reason">${escapeHtml(item.reason || '根据你的学习状态生成')}</div>
+                        </div>
+                        <div class="entry-explore-card-footer">
+                            <span class="entry-explore-card-meta">${escapeHtml(metaParts.join(' · '))}</span>
+                            <span class="entry-explore-card-cta">${escapeHtml(item.resource_action_label)} →</span>
+                        </div>
+                    </button>
+                    <button type="button" class="entry-explore-dismiss" data-explore-dismiss="${escapeHtml(item.id)}" aria-label="不感兴趣：${escapeHtml(item.title)}" title="不感兴趣">×</button>
+                </article>
+            `;
+        }
+
+        function renderExploreVisibleCards() {
+            const list = document.getElementById('recommendation-list');
+            if (!list) return;
+            const visibleItems = getExploreVisibleItems();
+            if (!exploreRecommendationState.items.length) {
+                renderExploreEmpty('还没有可用于匹配外部资源的学习主题。先在对话中提出想学的内容，或产生一些学习记录后再来看。');
+                return;
+            }
+            if (!visibleItems.length) {
+                renderExploreEmpty('当前分类还没有推荐，切换到“全部”看看其他内容。');
                 return;
             }
 
-            list.innerHTML = safeItems.map(function (item, index) {
-                const title = clampText(String(item.title || item.concept || '探索主题').replace(/\s*-\s*.+$/, ''), 30);
-                const query = String(item.concept || title || '').trim();
-                const preset = getExploreItemPreset(item);
-                const externalUrl = resolveExploreExternalUrl(item, preset);
-                const metaParts = [
-                    clampText(getExploreResourceLabel(item), 12),
-                    clampText(item.recommend_time || (externalUrl ? '点击查看资源' : '点击填入输入框'), 18)
-                ].filter(Boolean);
-                const artwork = getExploreArtwork(item, index);
-                const actionHint = item.reason || (externalUrl ? '点击跳转到外部资源' : '点击将主题填入输入框');
-                return `
-                    <button type="button" class="entry-explore-card" data-explore-query="${escapeHtml(query)}" data-explore-url="${escapeHtml(externalUrl)}" title="${escapeHtml(actionHint)}">
-                        <div class="entry-explore-card-cover" style="background-image: url('${artwork}');"></div>
-                        <div class="entry-explore-card-body">
-                            <div class="entry-explore-card-play" aria-hidden="true">&#9655;</div>
-                            <div class="entry-explore-card-copy">
-                                <div class="entry-explore-card-title">${escapeHtml(title)}</div>
-                                <div class="entry-explore-card-meta">${escapeHtml(metaParts.join(' · '))}</div>
-                            </div>
-                        </div>
-                    </button>
-                `;
-            }).join('');
+            list.innerHTML = visibleItems.map(buildExploreCardHtml).join('');
 
-            list.querySelectorAll('[data-explore-query]').forEach(function (card) {
-                card.addEventListener('click', function () {
-                    const externalUrl = String(this.getAttribute('data-explore-url') || '').trim();
-                    if (externalUrl) {
-                        window.location.href = externalUrl;
-                        return;
-                    }
-                    const query = String(this.getAttribute('data-explore-query') || '').trim();
-                    if (!query || !entryInput) return;
-                    entryInput.value = query;
-                    entryInput.focus();
-                    if (typeof entryInput.scrollIntoView === 'function') {
-                        entryInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
+            list.querySelectorAll('[data-explore-action]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    const itemId = String(this.getAttribute('data-explore-action') || '').trim();
+                    const position = parseInt(this.getAttribute('data-explore-position') || '0', 10);
+                    const item = exploreRecommendationState.items.find(function (row) { return row.id === itemId; });
+                    if (item) handleExploreCardAction(item, position);
                 });
+            });
+
+            list.querySelectorAll('[data-explore-dismiss]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    const itemId = String(this.getAttribute('data-explore-dismiss') || '').trim();
+                    const item = exploreRecommendationState.items.find(function (row) { return row.id === itemId; });
+                    if (item) handleExploreDismiss(item);
+                });
+            });
+
+            setupExploreImpressionTracking(visibleItems);
+        }
+
+        function renderExploreCards(items) {
+            exploreRecommendationState.items = normalizeExploreItems(items);
+            renderExploreVisibleCards();
+        }
+
+        function setExploreFilter(filter) {
+            const nextFilter = filter === 'all' || EXPLORE_FILTER_KINDS[filter] ? filter : 'all';
+            exploreRecommendationState.filter = nextFilter;
+            document.querySelectorAll('[data-explore-filter]').forEach(function (button) {
+                button.classList.toggle('is-active', button.getAttribute('data-explore-filter') === nextFilter);
+            });
+            renderExploreVisibleCards();
+        }
+
+        function bindExploreFilterControls() {
+            const filters = document.getElementById('entryExploreFilters');
+            if (!filters || filters.dataset.bound === '1') return;
+            filters.dataset.bound = '1';
+            filters.addEventListener('click', function (event) {
+                const button = event.target.closest('[data-explore-filter]');
+                if (!button) return;
+                setExploreFilter(String(button.getAttribute('data-explore-filter') || 'all'));
             });
         }
 
-        async function loadRecommendations() {
+        function buildExploreFeedbackEvent(item, eventType, position) {
+            return {
+                resource_id: item.id,
+                event_type: eventType,
+                scene: 'home_explore',
+                position: Math.max(0, Number(position) || 0),
+                concept: item.concept || '',
+                resource_kind: item.resource_kind || ''
+            };
+        }
+
+        function sendExploreFeedback(events) {
+            const payload = (Array.isArray(events) ? events : []).filter(Boolean);
+            if (!payload.length) return Promise.resolve();
+            const query = `user_id=${encodeURIComponent(getUserId())}`;
+            return fetch(`${API_BASE}/api/recommendations/feedback?${query}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ scene: 'home_explore', events: payload }),
+                keepalive: true
+            }).catch(function (error) {
+                console.warn('推荐反馈记录失败:', error);
+            });
+        }
+
+        function queueExploreImpressions(events) {
+            if (!events.length) return;
+            exploreRecommendationState.pendingImpressions.push.apply(
+                exploreRecommendationState.pendingImpressions,
+                events
+            );
+            if (exploreRecommendationState.impressionTimer) {
+                window.clearTimeout(exploreRecommendationState.impressionTimer);
+            }
+            exploreRecommendationState.impressionTimer = window.setTimeout(function () {
+                const pending = exploreRecommendationState.pendingImpressions.splice(0);
+                exploreRecommendationState.impressionTimer = 0;
+                sendExploreFeedback(pending);
+            }, 500);
+        }
+
+        function setupExploreImpressionTracking(items) {
+            const list = document.getElementById('recommendation-list');
+            if (!list) return;
+            if (exploreRecommendationState.observer) {
+                exploreRecommendationState.observer.disconnect();
+                exploreRecommendationState.observer = null;
+            }
+            const cards = Array.from(list.querySelectorAll('[data-explore-card]'));
+            if (!cards.length) return;
+
+            const markVisible = function (card) {
+                const itemId = String(card.getAttribute('data-explore-card') || '').trim();
+                if (!itemId || exploreRecommendationState.seenImpressions.has(itemId)) return;
+                exploreRecommendationState.seenImpressions.add(itemId);
+                const item = items.find(function (row) { return row.id === itemId; });
+                if (!item) return;
+                const position = Math.max(0, items.indexOf(item));
+                queueExploreImpressions([buildExploreFeedbackEvent(item, 'impression', position)]);
+            };
+
+            if (typeof IntersectionObserver === 'function') {
+                exploreRecommendationState.observer = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (entry) {
+                        if (entry.isIntersecting) markVisible(entry.target);
+                    });
+                }, { threshold: 0.55 });
+                cards.forEach(function (card) {
+                    exploreRecommendationState.observer.observe(card);
+                });
+            } else {
+                window.setTimeout(function () {
+                    cards.forEach(markVisible);
+                }, 1000);
+            }
+        }
+
+        function fillExploreQuery(query) {
+            const entryInput = document.getElementById('entryQuestionInput');
+            if (!entryInput) return;
+            entryInput.value = String(query || '').trim();
+            entryInput.focus();
+            if (typeof entryInput.scrollIntoView === 'function') {
+                entryInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function handleExploreCardAction(item, position) {
+            sendExploreFeedback([buildExploreFeedbackEvent(item, 'click', position)]);
+            const action = item.action || {};
+            const url = String(action.url || item.external_url || '').trim();
+            if (url) {
+                window.open(url, '_blank', 'noopener,noreferrer');
+                return;
+            }
+            fillExploreQuery(item.concept || item.title);
+        }
+
+        function handleExploreDismiss(item) {
+            const position = Math.max(0, exploreRecommendationState.items.findIndex(function (row) {
+                return row.id === item.id;
+            }));
+            sendExploreFeedback([buildExploreFeedbackEvent(item, 'dismiss', position)]);
+            exploreRecommendationState.items = exploreRecommendationState.items.filter(function (row) {
+                return row.id !== item.id;
+            });
+            renderExploreVisibleCards();
+        }
+
+        async function loadRecommendations(options) {
             const list = document.getElementById('recommendation-list');
             const refreshBtn = document.getElementById('entryExploreRefreshBtn');
-            if (!list) return;
-            list.innerHTML = '<div class="entry-explore-empty">正在为你准备探索内容...</div>';
+            if (!list || exploreRecommendationState.loading) return;
+            const opts = options && typeof options === 'object' ? options : {};
+            exploreRecommendationState.loading = true;
+            renderExploreLoading();
             if (refreshBtn) refreshBtn.disabled = true;
+
             try {
                 const userId = getUserId();
-                const resp = await fetch(`${API_BASE}/api/recommendations?user_id=${userId}&limit=8`);
-                const data = await parseApiResponse(resp);
-
-                const filterEl = document.getElementById('recommendation-style-filter');
-                const activeStyle = filterEl ? (filterEl.value || 'all') : 'all';
-                const filteredItems = (data.items || []).filter(item => {
-                    if (activeStyle === 'all') return true;
-                    const tags = Array.isArray(item.strategy_tags) ? item.strategy_tags : [];
-                    return tags.some(tag => String(tag).trim() === `style:${activeStyle}`);
+                const refresh = !!opts.refresh;
+                const excludeIds = refresh
+                    ? Array.from(new Set(
+                        exploreRecommendationState.items.map(function (item) { return item.id; })
+                    )).slice(0, 20)
+                    : [];
+                const params = new URLSearchParams({
+                    user_id: userId,
+                    scene: 'home_explore',
+                    limit: '8',
+                    refresh: refresh ? '1' : '0'
                 });
-                renderExploreCards(filteredItems.length ? filteredItems : getFallbackExploreItems());
+                if (excludeIds.length) params.set('exclude', excludeIds.join(','));
+                const resp = await fetch(`${API_BASE}/api/recommendations?${params.toString()}`);
+                const data = await parseApiResponse(resp);
+                const items = Array.isArray(data.items) ? data.items : [];
+                if (!items.length) {
+                    exploreRecommendationState.items = [];
+                    renderExploreEmpty(refresh
+                        ? '暂时没有更多外部资源了，稍后再试。'
+                        : '还没有可用于匹配外部资源的学习主题。先在对话中提出想学的内容，或产生一些学习记录后再来看。');
+                } else {
+                    renderExploreCards(items);
+                }
             } catch (error) {
-                console.warn('探索推荐加载失败，已切换为兜底卡片：', error);
-                renderExploreCards(getFallbackExploreItems());
+                console.warn('探索推荐加载失败：', error);
+                if (!exploreRecommendationState.items.length) {
+                    renderExploreEmpty('外部资源推荐加载失败，请稍后重试。');
+                } else {
+                    renderExploreVisibleCards();
+                }
             } finally {
+                exploreRecommendationState.loading = false;
                 if (refreshBtn) refreshBtn.disabled = false;
             }
         }
@@ -6323,7 +6950,19 @@
         }
         
         // 发送问题
+        let isAskingQuestion = false;
+
         async function askQuestion() {
+            if (isAskingQuestion) return;
+            isAskingQuestion = true;
+            try {
+                await askQuestionInner();
+            } finally {
+                isAskingQuestion = false;
+            }
+        }
+
+        async function askQuestionInner() {
             const question = document.getElementById('questionInput').value.trim();
             if (!question) return;
 
@@ -6393,7 +7032,7 @@
                 // 某些代理/网关会拒绝 POST，遇到 405 时自动回退到 GET 以确保问答可用。
                 if (response.status === 405) {
                     const qs = new URLSearchParams({
-                        question: question,
+                        question: questionForApi,
                         user_id: getUserId()
                     });
                     response = await fetch(`${API_BASE}/api/ask?${qs.toString()}`, {
@@ -6405,7 +7044,11 @@
                 
                 // 移除加载消息
                 removeTypingMessage();
-                const extractData = await autoExtractKnowledge(question, 'qa');
+                // 后端 /api/ask 已完成知识点抽取，只有缺失时才补调，避免重复写图谱。
+                let extractData = data.knowledge_extract || {};
+                if (!extractData || typeof extractData !== 'object' || !Object.keys(extractData).length) {
+                    extractData = await autoExtractKnowledge(question, 'qa');
+                }
                 
                 // 添加AI回答
                 addMessage(normalizeAiAnswerText(data.answer), 'ai', {
@@ -6428,9 +7071,9 @@
             }
         }
 
-        async function drawQuestionAndAsk() {
+        async function drawQuestionAndAsk(conceptOverride) {
             const conceptInput = document.getElementById('qb-draw-concept');
-            const concept = getDrawQuestionConcept();
+            const concept = String(conceptOverride || getDrawQuestionConcept() || '').trim();
             if (!concept) {
                 addMessage('开始题库练习前，请先填写要考察的知识点，例如“导数”。', 'ai', {
                     source: 'question_bank',
@@ -6916,6 +7559,6 @@
         refreshAiStatus();
     </script>
     <!-- 添加学习计划功能脚本 -->
-    <script src="assets/js/pages/home-plan-widget.js"></script>
+    <script src="assets/js/pages/home-plan-widget.js?v=20261114-plan-drawer-v1"></script>
 </body>
 </html>

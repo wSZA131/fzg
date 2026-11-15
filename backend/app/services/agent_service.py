@@ -61,6 +61,8 @@ logger = logging.getLogger(__name__)
 
 _memory_store = {}
 _memory_lock = threading.Lock()
+# 匿名访客会不断产生新 session，必须限制内存会话数量，避免长时间运行后内存持续增长。
+_MEMORY_HISTORY_MAX_SESSIONS = max(10, int(os.getenv("AGENT_HISTORY_MAX_SESSIONS", "200")))
 _KB_ROUTER_KEYWORDS = {
     "知识库",
     "资料",
@@ -225,6 +227,8 @@ class TutorAgentService:
         self.timeout_seconds = max(5, int(os.getenv("AGENT_TIMEOUT_SECONDS", "50")))
         self.enable_guard = _to_bool(os.getenv("AGENT_ENABLE_GUARD", "true"), True)
         self.chat_history_backend = os.getenv("AGENT_HISTORY_BACKEND", "auto").strip().lower()
+        # 记录实际生效的历史后端（Redis 不可达时会回退内存），用于 meta 上报。
+        self._active_history_backend = "memory"
         self.redis_url = os.getenv("AGENT_REDIS_URL", os.getenv("REDIS_URL", "redis://127.0.0.1:6379/2"))
         self.allowed_tool_names = {
             getattr(t, "name", getattr(t, "__name__", ""))
@@ -377,14 +381,22 @@ class TutorAgentService:
                 history = RedisChatMessageHistory(session_id=session_id, url=self.redis_url)
                 # 触发一次轻量读取，尽早发现 Redis 不可达并回退内存实现。
                 _ = history.messages
+                self._active_history_backend = "redis"
                 return history
             except Exception:
-                pass
+                logger.warning("Redis history unavailable, falling back to memory: %s", exc_info=True)
+                self._active_history_backend = "memory"
 
         with _memory_lock:
-            if session_id not in _memory_store:
-                _memory_store[session_id] = ChatMessageHistory()
-            return _memory_store[session_id]
+            history = _memory_store.pop(session_id, None)
+            if history is None:
+                history = ChatMessageHistory()
+            # 重新插入到末尾，保持最近访问顺序；超出上限时淘汰最久未使用的会话。
+            _memory_store[session_id] = history
+            while len(_memory_store) > _MEMORY_HISTORY_MAX_SESSIONS:
+                _memory_store.pop(next(iter(_memory_store)))
+            self._active_history_backend = "memory"
+            return history
 
     @staticmethod
     def _short_text(value, max_len=140):
@@ -398,8 +410,14 @@ class TutorAgentService:
         if not steps:
             return logs
 
-        avg_step_latency = max(1, int(elapsed_ms / max(1, len(steps))))
         normalized_events = [event for event in (tool_events or []) if isinstance(event, dict)]
+        # 回调事件按工具名对齐，不能用下标：重试轮次或并行调用会让下标错位。
+        events_by_tool = {}
+        for event in normalized_events:
+            event_tool = str(event.get("tool_name") or event.get("tool") or "").strip()
+            if event_tool:
+                events_by_tool.setdefault(event_tool, []).append(event)
+
         for index, (action, result) in enumerate(steps):
             tool_name = getattr(action, "tool", "unknown")
             tool_input = getattr(action, "tool_input", {})
@@ -410,9 +428,10 @@ class TutorAgentService:
             if "异常" in result_text or "error" in result_text.lower() or "failed" in result_text.lower():
                 status = "failed"
 
-            latency_ms = avg_step_latency
-            if index < len(normalized_events):
-                event_latency = normalized_events[index].get("latency_ms")
+            latency_ms = None
+            matched_events = events_by_tool.get(tool_name) or []
+            if matched_events:
+                event_latency = matched_events.pop(0).get("latency_ms")
                 if event_latency is not None:
                     latency_ms = max(1, int(round(float(event_latency))))
 
@@ -609,7 +628,7 @@ class TutorAgentService:
         meta = {
             "latency_ms": round(elapsed_ms, 2),
             "retry_count": retry_count if retry_count is not None else self.max_retries,
-            "history_backend": "redis" if self.chat_history_backend in {"redis", "auto"} else "memory",
+            "history_backend": getattr(self, "_active_history_backend", "memory"),
             "kb_routing_required": require_kb,
             "kb_retry_triggered": False,
             "kb_route_type": kb_route.get("route_type", "none"),
@@ -703,8 +722,8 @@ class TutorAgentService:
                         "tool_name": "none",
                         "tool_input": {},
                         "tool_output_summary": "本次未触发工具调用",
-                        "latency_ms": max(1, int(elapsed_ms)),
-                        "status": "success",
+                        "latency_ms": 0,
+                        "status": "skipped",
                     }
                 ]
 
@@ -724,7 +743,7 @@ class TutorAgentService:
                 "meta": {
                     "latency_ms": round(total_latency, 2),
                     "retry_count": retries,
-                    "history_backend": "redis" if self.chat_history_backend in {"redis", "auto"} else "memory",
+                    "history_backend": getattr(self, "_active_history_backend", "memory"),
                     "kb_routing_required": require_kb,
                     "kb_retry_triggered": kb_retry_triggered,
                     "kb_route_type": kb_route.get("route_type", "none"),
@@ -861,7 +880,7 @@ class TutorAgentService:
                             "meta": {
                                 "latency_ms": round(total_latency, 2),
                                 "retry_count": retries,
-                                "history_backend": "redis" if self.chat_history_backend in {"redis", "auto"} else "memory",
+                                "history_backend": getattr(self, "_active_history_backend", "memory"),
                                 "kb_routing_required": require_kb,
                                 "kb_retry_triggered": kb_retry_triggered,
                                 "kb_route_type": kb_route.get("route_type", "none"),

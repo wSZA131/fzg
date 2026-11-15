@@ -1,7 +1,9 @@
 import json
 import os
+import re
 import tempfile
 import threading
+import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
@@ -16,6 +18,34 @@ STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "json").strip().lower()
 SPACE_STORAGE_BACKEND = os.getenv("SPACE_STORAGE_BACKEND", "sql").strip().lower()
 SPACE_FILE_SUFFIX = "_spaces.json"
 _JSON_LOCK = threading.RLock()
+
+# 用户标识会直接参与 JSON 文件名，必须净化，避免 ../ 之类的路径穿越。
+# 允许字母、数字、@ . _ -，覆盖邮箱与 guest_xxx 两种既有 ID 形态。
+_USER_KEY_PATTERN = re.compile(r"[^A-Za-z0-9@._-]")
+KNOWN_EVENT_SUFFIXES = frozenset({
+    "behavior",
+    "content",
+    "diagnosis",
+    "feedback",
+    "learning_plan",
+    "qa",
+    "question_answer",
+    "question_draw",
+    "recommendation",
+    "wrong_question",
+})
+
+
+def _safe_user_key(user_id) -> str:
+    key = str(user_id or "").strip()
+    if not key:
+        return "_anonymous"
+    return _USER_KEY_PATTERN.sub("_", key)[:128]
+
+
+def _safe_event_suffix(suffix) -> str:
+    value = _USER_KEY_PATTERN.sub("_", str(suffix or "").strip())
+    return value or "event"
 
 
 def ensure_data_dir():
@@ -62,7 +92,8 @@ def _safe_json_load_text(text: Optional[str], default):
 
 
 def _now_ms() -> int:
-    return int(datetime.utcnow().timestamp() * 1000)
+    # 直接用 epoch 秒，避免 naive datetime 被按本地时区解释导致时间戳偏移。
+    return int(time.time() * 1000)
 
 
 def _to_int(value, fallback: int) -> int:
@@ -154,7 +185,7 @@ def _count_space_items(payload: Dict[str, Any]) -> int:
 class JsonSpaceRepository:
     @staticmethod
     def _filename(user_id: str) -> str:
-        return f"{str(user_id or '').strip()}{SPACE_FILE_SUFFIX}"
+        return f"{_safe_user_key(user_id)}{SPACE_FILE_SUFFIX}"
 
     def get_user_space_payload(self, user_id: str) -> Dict[str, Any]:
         filename = self._filename(user_id)
@@ -238,27 +269,27 @@ class JsonRepository:
             save_json("user_plans.json", plans)
 
     def get_user_knowledge(self, user_id: str) -> Dict[str, Any]:
-        return load_json(f"{user_id}_knowledge.json", {"concepts": []})
+        return load_json(f"{_safe_user_key(user_id)}_knowledge.json", {"concepts": []})
 
     def set_user_knowledge(self, user_id: str, knowledge: Dict[str, Any]) -> None:
         with _JSON_LOCK:
-            save_json(f"{user_id}_knowledge.json", knowledge)
+            save_json(f"{_safe_user_key(user_id)}_knowledge.json", knowledge)
 
     def get_user_profile(self, user_id: str) -> Dict[str, Any]:
-        return load_json(f"{user_id}_profile.json", {})
+        return load_json(f"{_safe_user_key(user_id)}_profile.json", {})
 
     def set_user_profile(self, user_id: str, profile: Dict[str, Any]) -> None:
         with _JSON_LOCK:
-            save_json(f"{user_id}_profile.json", profile)
+            save_json(f"{_safe_user_key(user_id)}_profile.json", profile)
 
     def get_user_events(self, user_id: str, suffix: str) -> List[Dict[str, Any]]:
-        return load_json(f"{user_id}_{suffix}.json", [])
+        return load_json(f"{_safe_user_key(user_id)}_{_safe_event_suffix(suffix)}.json", [])
 
     def append_user_event(self, user_id: str, suffix: str, item: Dict[str, Any]) -> None:
         with _JSON_LOCK:
             events = self.get_user_events(user_id, suffix)
             events.append(item)
-            save_json(f"{user_id}_{suffix}.json", events)
+            save_json(f"{_safe_user_key(user_id)}_{_safe_event_suffix(suffix)}.json", events)
 
     def get_auth_user(self, username: str) -> Optional[Dict[str, Any]]:
         username = str(username or "").strip()
@@ -389,24 +420,17 @@ class JsonRepository:
                 save_json("user_plans.json", plans)
                 summary["plans_deleted"] = 1
 
-            if self._delete_file(f"{username}_knowledge.json"):
+            user_key = _safe_user_key(username)
+            if self._delete_file(f"{user_key}_knowledge.json"):
                 summary["knowledge_deleted"] = 1
-            if self._delete_file(f"{username}_profile.json"):
+            if self._delete_file(f"{user_key}_profile.json"):
                 summary["profile_deleted"] = 1
 
+            # 只删除该用户的事件文件，不能用前缀匹配：用户 abc 的 "abc_" 前缀会误删 "abc_2_*"。
             event_file_count = 0
-            prefix = f"{username}_"
-            skip_names = {
-                f"{username}_knowledge.json",
-                f"{username}_profile.json",
-            }
-            for filename in os.listdir(DATA_DIR):
-                if filename in skip_names:
-                    continue
-                if not filename.startswith(prefix) or not filename.endswith(".json"):
-                    continue
-                os.remove(os.path.join(DATA_DIR, filename))
-                event_file_count += 1
+            for suffix in KNOWN_EVENT_SUFFIXES:
+                if self._delete_file(f"{user_key}_{suffix}.json"):
+                    event_file_count += 1
             summary["events_deleted"] = event_file_count
 
             return summary

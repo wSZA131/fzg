@@ -1,8 +1,9 @@
 import logging
-import traceback
+import os
+import secrets
 import json
 
-from flask import Blueprint, jsonify, request, Response, stream_with_context
+from flask import Blueprint, current_app, jsonify, request, Response, stream_with_context
 
 from ..services.agent_metrics import agent_metrics
 from ..services.knowledge_base import ingest_kb_note, search_kb
@@ -86,6 +87,18 @@ def handle_ocr_tutor():
                 # OCR 失败时优先降级到文本路径，避免直接中断用户问答。
                 fallback_text = str(data.get("ocr_text") or request.form.get("ocr_text") or question or "").strip()
                 if not fallback_text:
+                    if ocr_result.get("synthetic"):
+                        return (
+                            jsonify(
+                                {
+                                    "success": False,
+                                    "error_code": "OCR_TEXT_REQUIRED",
+                                    "error_message": "当前未识别出图片文字，请在提问框补充题干文本后再提交",
+                                    "provider": ocr_result.get("provider", "unknown"),
+                                }
+                            ),
+                            422,
+                        )
                     return (
                         jsonify(
                             {
@@ -108,6 +121,10 @@ def handle_ocr_tutor():
         if not ocr_text:
             return jsonify({"success": False, "error": "Missing image or ocr_text"}), 400
 
+        # 文本通道通常会把同一段问题同时放进 question 与 ocr_text，
+        # 传给智能体前去重，避免同一句话在提示词里出现两次。
+        agent_ocr_text = "" if (question and ocr_text == question) else ocr_text
+
         agent = get_tutor_agent()
         if agent is None:
             return jsonify({"success": False, "error": "Agent service is not initialized properly."}), 500
@@ -125,7 +142,7 @@ def handle_ocr_tutor():
                     for chunk in agent.stream_solve_problem(
                         session_id=session_id,
                         student_id=student_id,
-                        ocr_text=ocr_text,
+                        ocr_text=agent_ocr_text,
                         question_text=question,
                     ):
                         yield chunk
@@ -134,7 +151,7 @@ def handle_ocr_tutor():
                 for chunk in agent.stream_solve_problem(
                     session_id=session_id,
                     student_id=student_id,
-                    ocr_text=ocr_text,
+                    ocr_text=agent_ocr_text,
                     question_text=question,
                 ):
                     chunk_text = str(chunk or "")
@@ -188,7 +205,7 @@ def handle_ocr_tutor():
         result = agent.solve_problem(
             session_id=session_id,
             student_id=student_id,
-            ocr_text=ocr_text,
+            ocr_text=agent_ocr_text,
             question_text=question,
         )
 
@@ -210,8 +227,10 @@ def handle_ocr_tutor():
             logger.warning("agent post process skipped: %s", exc)
 
 
+        # agent 结果先展开，再由外层契约覆盖 success 等字段，避免内部键污染响应格式。
         return jsonify(
             {
+                **result,
                 "success": True,
                 "student_id": student_id,
                 "session_id": session_id,
@@ -219,12 +238,65 @@ def handle_ocr_tutor():
                 "knowledge_extract": (post_process or {}).get("knowledge_extract", {}),
                 "diagnosis": (post_process or {}).get("diagnosis"),
                 "learning_advice": (post_process or {}).get("learning_advice"),
-                **result,
             }
         )
     except Exception as e:
-        logger.error(f"Error in handle_ocr_tutor: {e}")
-        return jsonify({"success": False, "error": str(e), "trace": traceback.format_exc()}), 500
+        logger.error("Error in handle_ocr_tutor: %s", e, exc_info=True)
+        request_id = ""
+        try:
+            from ..server import get_request_id
+
+            request_id = get_request_id()
+        except Exception:
+            request_id = ""
+        # 不向前端返回 traceback：其中包含文件路径、依赖版本与内部函数名。
+        return jsonify(
+            {
+                "success": False,
+                "error_code": "AGENT_INTERNAL_ERROR",
+                "error_message": "问答服务暂时不可用，请稍后重试",
+                "request_id": request_id,
+            }
+        ), 500
+
+
+def _authorize_eval_request():
+    """评测接口会触发真实模型调用并写入指定 student_id，默认关闭。
+
+    开启方式（二选一）：
+    - 服务端设置 AGENT_EVAL_ENABLED=true（仅限本地/内网评测环境）
+    - 服务端设置 AGENT_EVAL_TOKEN，请求头携带 X-Eval-Token
+    """
+    if current_app.config.get("TESTING"):
+        return None
+    if str(os.getenv("AGENT_EVAL_ENABLED", "false")).strip().lower() == "true":
+        return None
+    expected = str(os.getenv("AGENT_EVAL_TOKEN", "")).strip()
+    provided = str(request.headers.get("X-Eval-Token", "")).strip()
+    if expected and provided and secrets.compare_digest(expected, provided):
+        return None
+    return (
+        jsonify(
+            {
+                "success": False,
+                "error_code": "EVAL_DISABLED",
+                "error_message": "评测接口未启用：请设置 AGENT_EVAL_ENABLED=true 或配置 AGENT_EVAL_TOKEN",
+            }
+        ),
+        403,
+    )
+
+
+def _real_tool_calls(result):
+    evidence = result.get("evidence") if isinstance(result, dict) else {}
+    calls = evidence.get("tool_calls") if isinstance(evidence, dict) else []
+    if not isinstance(calls, list):
+        return []
+    return [
+        str(name)
+        for name in calls
+        if str(name).strip() and str(name) not in {"none", "local_rule_fallback"}
+    ]
 
 
 @agent_bp.route('/api/agent/metrics', methods=['GET'])
@@ -235,10 +307,16 @@ def get_agent_metrics():
 @agent_bp.route('/api/agent/eval', methods=['POST'])
 def run_agent_eval():
     """在线评测：输入样例列表并返回可复现指标。"""
+    auth_error = _authorize_eval_request()
+    if auth_error:
+        return auth_error
+
     payload = request.get_json(silent=True) or {}
     cases = payload.get("cases", [])
     if not isinstance(cases, list) or not cases:
         return jsonify({"success": False, "error": "cases must be a non-empty list"}), 400
+    if len(cases) > 50:
+        return jsonify({"success": False, "error": "cases must not exceed 50 per request"}), 400
 
     agent = get_tutor_agent()
     if agent is None:
@@ -272,7 +350,10 @@ def run_agent_eval():
         kw_total = max(1, len(expected_keywords) if isinstance(expected_keywords, list) else 0)
         kw_score = hit / kw_total
 
-        has_tool_trace = bool(out.get("steps_log"))
+        # 只把真实工具调用计入得分：steps_log 里的 none / local_rule_fallback 不算工具轨迹，
+        # 否则评测分恒定虚高（历史上该项恒为 1.0）。
+        tool_calls = _real_tool_calls(out)
+        has_tool_trace = bool(tool_calls)
         case_score = 0.6 * kw_score + 0.4 * (1.0 if has_tool_trace else 0.0)
         score_sum += case_score
 
@@ -282,7 +363,9 @@ def run_agent_eval():
                 "score": round(case_score, 4),
                 "keyword_score": round(kw_score, 4),
                 "has_tool_trace": has_tool_trace,
+                "tool_calls": tool_calls,
                 "trace_count": len(out.get("steps_log", [])),
+                "offline_fallback_used": bool((out.get("evidence") or {}).get("offline_fallback_used")),
             }
         )
 
@@ -302,10 +385,16 @@ def run_agent_eval():
 @agent_bp.route('/api/agent/eval-ab', methods=['POST'])
 def run_agent_eval_ab():
     """A/B 评测：对比基础模式与强制知识库路由模式。"""
+    auth_error = _authorize_eval_request()
+    if auth_error:
+        return auth_error
+
     payload = request.get_json(silent=True) or {}
     cases = payload.get("cases", [])
     if not isinstance(cases, list) or not cases:
         return jsonify({"success": False, "error": "cases must be a non-empty list"}), 400
+    if len(cases) > 50:
+        return jsonify({"success": False, "error": "cases must not exceed 50 per request"}), 400
 
     agent = get_tutor_agent()
     if agent is None:
@@ -444,7 +533,12 @@ def search_agent_kb():
 
     student_id = str((identity or {}).get("user_id") or "").strip()
     query = str(data.get("query") or "").strip()
-    top_k = int(data.get("top_k") or 3)
+    try:
+        top_k = int(data.get("top_k") or 3)
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error_code": "INVALID_INPUT", "error_message": "top_k 必须是 1-10 的整数"}), 400
+    if top_k < 1 or top_k > 10:
+        return jsonify({"success": False, "error_code": "INVALID_INPUT", "error_message": "top_k 必须是 1-10 的整数"}), 400
     search_mode = str(data.get("search_mode") or "hybrid").strip().lower()
 
     if not query:

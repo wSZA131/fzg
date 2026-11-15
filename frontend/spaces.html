@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <link rel="icon" type="image/svg+xml" href="assets/images/app-icon.svg">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的空间</title>
@@ -8,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/shared/auth-ui.css?v=20260512-auth-modal-scrollbarhide-v3">
+    <link rel="stylesheet" href="assets/css/shared/study-drawer.css?v=20261113-study-drawer-v2">
     <style>
         :root {
             --ink: #0f172a;
@@ -227,6 +229,20 @@
             overflow: hidden;
             text-overflow: ellipsis;
             max-width: min(42vw, 520px);
+        }
+
+        .space-shell-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 10px 12px;
+            min-width: 0;
+        }
+
+        .space-streak-dock {
+            display: flex;
+            align-items: center;
         }
 
         .space-shell-user {
@@ -1265,6 +1281,11 @@
                 flex-direction: column;
             }
 
+            .space-shell-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+
             .space-shell-user {
                 white-space: normal;
             }
@@ -1341,6 +1362,7 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="assets/css/shared/site-theme.css?v=20261113-brand-icon-v2">
 </head>
 <body>
     <button class="global-sidebar-toggle" id="globalSidebarToggle" type="button" aria-label="打开侧栏">
@@ -1354,13 +1376,12 @@
     <aside class="global-sidebar" id="globalSidebar">
         <div class="global-sidebar-scroll">
             <div class="global-sidebar-logo">坊知工</div>
-            <a class="global-sidebar-link" data-side-link="index.html" href="index.html">+ 添加内容</a>
-            <a class="global-sidebar-link" data-side-link="chat.html" href="chat.html">◎ 智能问答</a>
-            <a class="global-sidebar-link" data-side-link="question-bank.html" href="question-bank.html">◎ 题库练习</a>
-            <a class="global-sidebar-link" data-side-link="dashboard.html" href="dashboard.html">◧ 学习仪表盘</a>
-            <a class="global-sidebar-link" data-side-link="knowledge-map.html" href="knowledge-map.html">◇ 知识图谱</a>
+            <a class="global-sidebar-link" data-side-link="index.html" href="index.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="st-nav-label">添加内容</span></a>
+            <a class="global-sidebar-link" data-side-link="chat.html" href="chat.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H8l-5 3 1.2-5.1A8.5 8.5 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5Z"/></svg></span><span class="st-nav-label">智能问答</span></a>
+            <a class="global-sidebar-link" data-side-link="question-bank.html" href="question-bank.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12.3l2.6 2.6L16 9.3"/></svg></span><span class="st-nav-label">题库练习</span></a>
+            <a class="global-sidebar-link" data-side-link="dashboard.html" href="dashboard.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></svg></span><span class="st-nav-label">学习仪表盘</span></a>
             <div class="global-sidebar-section">空间</div>
-            <a class="global-sidebar-link" data-side-link="spaces.html" href="spaces.html">◻ 我的空间</a>
+            <a class="global-sidebar-link" data-side-link="spaces.html" href="spaces.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h3.9l2.1 2.6h6.9a2 2 0 0 1 2 2v7.4a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z"/></svg></span><span class="st-nav-label">我的空间</span></a>
         </div>
     </aside>
 
@@ -1376,7 +1397,17 @@
                 <div class="space-shell-context-name" id="topSpaceName">我的空间</div>
             </div>
         </div>
-        <div class="space-shell-user" id="spaceUserLabel">用户：-</div>
+        <div class="space-shell-actions">
+            <button class="study-launcher" id="studyLauncherBtn" type="button" aria-haspopup="dialog" aria-controls="studyDrawer" aria-expanded="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5V5.5Z"></path>
+                    <path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20"></path>
+                </svg>
+                <span>学习</span>
+            </button>
+            <div class="space-streak-dock" id="globalStreakDock"></div>
+            <div class="space-shell-user" id="spaceUserLabel">用户：-</div>
+        </div>
     </header>
 
     <main class="space-page" id="spacePage">
@@ -1534,7 +1565,8 @@
     <script src="assets/js/shared/project-local-data.js?v=20260330-authfix"></script>
     <script src="assets/js/shared/space-cloud-store.js?v=20260403-sidebarspaces"></script>
     <script src="assets/js/shared/auth-ui.js?v=20260512-auth-register-autofill-fix"></script>
-    <script src="assets/js/shared/page-shell.js?v=20260416-streak-dock"></script>
+    <script src="assets/js/shared/page-shell.js?v=20261113-graph-merge"></script>
+    <script src="assets/js/shared/study-drawer.js?v=20261113-study-drawer-v3"></script>
     <script src="assets/js/pages/spaces-page.js?v=20260416-recorderfix"></script>
 </body>
 </html>

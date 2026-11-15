@@ -53,58 +53,6 @@
       "bank_source": "official_ai"
     },
     {
-      "id": "qb-ai-65df6baeae0e",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "函数 $ f(x) = x^2 \\ln x $（定义域 $ x > 0 $）的导数 $ f'(x) $ 为：",
-      "options": [
-        "A. $ 2x \\ln x + x $",
-        "B. $ 2x \\ln x - x $",
-        "C. $ 2x \\ln x + \\frac{x^2}{x} $",
-        "D. $ 2x \\ln x + \\frac{1}{x} $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ (uv)' = u'v + uv' $，其中 $ u = x^2 $，$ v = \\ln x $，得 $ u' = 2x $，$ v' = \\frac{1}{x} $，故 $ f'(x) = 2x \\ln x + x^2 \\cdot \\frac{1}{x} = 2x \\ln x + x $。",
-      "created_at": "2026-03-30T18:07:07.987186",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
-      "id": "qb-ai-65bbfb51ad46",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "short_answer",
-      "question": "已知函数 $ g(x) = \\sin(3x + 1) $，求其在 $ x = 0 $ 处的导数值。",
-      "options": [],
-      "answer": "3\\cos(1)",
-      "analysis": "由链式法则，$ g'(x) = \\cos(3x + 1) \\cdot 3 = 3\\cos(3x + 1) $，代入 $ x = 0 $ 得 $ g'(0) = 3\\cos(1) $。",
-      "created_at": "2026-03-30T18:07:07.987211",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
-      "id": "qb-ai-6d87bbfbbd7a",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "若函数 $ h(x) = \\frac{e^x}{x} $（$ x \\neq 0 $），则其导数 $ h'(x) $ 等于：",
-      "options": [
-        "A. $ \\frac{e^x(x - 1)}{x^2} $",
-        "B. $ \\frac{e^x(1 - x)}{x^2} $",
-        "C. $ \\frac{e^x}{x^2} $",
-        "D. $ \\frac{e^x(x + 1)}{x^2} $"
-      ],
-      "answer": "A",
-      "analysis": "使用商法则：$ \\left( \\frac{u}{v} \\right)' = \\frac{u'v - uv'}{v^2} $，其中 $ u = e^x $，$ v = x $，得 $ u' = e^x $，$ v' = 1 $，故 $ h'(x) = \\frac{e^x \\cdot x - e^x \\cdot 1}{x^2} = \\frac{e^x(x - 1)}{x^2} $。",
-      "created_at": "2026-03-30T18:07:07.987223",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
       "id": "qb-ai-9ce4478dcb4e",
       "concept": "导数",
       "difficulty": "medium",
@@ -119,63 +67,6 @@
       "answer": "A",
       "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
       "created_at": "2026-03-30T20:46:33.377989",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
-      "id": "qb-ai-bd793ad8cca8",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
-      "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-03-30T21:18:06.064119",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
-      "id": "qb-ai-e9c58ce4ebf2",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
-      "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-03-30T21:18:47.472778",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
-      "id": "qb-ai-4a82bc4bf7a5",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
-      "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-03-30T21:18:48.634755",
       "created_by": "official_ai",
       "is_public": true,
       "bank_source": "official_ai"
@@ -200,101 +91,6 @@
       "bank_source": "official_ai"
     },
     {
-      "id": "qb-ai-51262cee4351",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
-      "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-03-31T00:00:03.733370",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
-      "id": "qb-ai-f4d35f103ee0",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
-      "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-03-31T11:35:09.591627",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
-      "id": "qb-ai-5092c515343a",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
-      "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-03-31T15:11:35.106553",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
-      "id": "qb-ai-12200e31e1c9",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
-      "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-03-31T15:45:00.740118",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
-      "id": "qb-ai-04a4524fb7cf",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
-      "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-03-31T15:47:21.199542",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
       "id": "qb-ai-64215cd70d15",
       "concept": "奶龙",
       "difficulty": "medium",
@@ -309,25 +105,6 @@
       "answer": "A",
       "analysis": "每日摄入：3 × 250 = 750毫升 = 0.75升；7天共：0.75 × 7 = 5.25升。",
       "created_at": "2026-03-31T19:31:37.409102",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
-      "id": "qb-ai-d869bdeee360",
-      "concept": "奶龙",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "奶龙每天喝3瓶牛奶，每瓶250毫升。若他连续喝7天，共摄入多少升牛奶？",
-      "options": [
-        "A. 5.25升",
-        "B. 7.5升",
-        "C. 17.5升",
-        "D. 52.5升"
-      ],
-      "answer": "A",
-      "analysis": "每日摄入：3 × 250 = 750毫升 = 0.75升；7天共：0.75 × 7 = 5.25升。",
-      "created_at": "2026-03-31T19:32:20.124212",
       "created_by": "official_ai",
       "is_public": true,
       "bank_source": "official_ai"
@@ -352,82 +129,6 @@
       "bank_source": "official_ai"
     },
     {
-      "id": "qb-ai-f737c3f15311",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
-      "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-04-03T09:14:01.749839",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
-      "id": "qb-ai-f22f11bb809a",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
-      "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-04-03T09:14:11.798204",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
-      "id": "qb-ai-058ebbfc81e6",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
-      "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-04-10T09:45:39.154893",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
-      "id": "qb-ai-0fcc569c67a6",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
-      "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-04-10T17:17:15.782627",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
       "id": "qb-ai-8aaa288674f6",
       "concept": "导数",
       "difficulty": "medium",
@@ -442,63 +143,6 @@
       "answer": "A",
       "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
       "created_at": "2026-04-10T20:52:54.330821",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
-      "id": "qb-ai-89ea421334b6",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
-      "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-04-10T22:29:36.450766",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
-      "id": "qb-ai-c6b4e18412b3",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
-      "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-04-10T22:29:57.557390",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
-      "id": "qb-ai-2cae0136157c",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
-      "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-04-10T22:30:09.023434",
       "created_by": "official_ai",
       "is_public": true,
       "bank_source": "official_ai"
@@ -523,119 +167,57 @@
       "bank_source": "official_ai"
     },
     {
-      "id": "qb-ai-cf4c01fdec66",
+      "id": "qb-ai-fallback-0c8ecc365936",
       "concept": "导数",
       "difficulty": "medium",
       "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
+      "question": "导数在几何上最直接表示为：（扩展题 1）",
       "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
+        "A. 曲线某点切线斜率",
+        "B. 曲线围成面积",
+        "C. 函数在区间上的平均值",
+        "D. 函数零点个数"
       ],
       "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-04-10T22:31:47.495203",
+      "analysis": "导数刻画瞬时变化率，几何意义是切线斜率。",
+      "created_at": "2026-11-13T21:03:29.401447",
       "created_by": "official_ai",
       "is_public": true,
       "bank_source": "official_ai"
     },
     {
-      "id": "qb-ai-60387e74e38a",
+      "id": "qb-ai-fallback-a9083539cfd8",
       "concept": "导数",
       "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
-      "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-04-10T22:31:56.491249",
+      "question_type": "fill_blank",
+      "question": "导数在几何上最直接表示为： ____",
+      "options": [],
+      "answer": "曲线某点切线斜率",
+      "analysis": "导数刻画瞬时变化率，几何意义是切线斜率。",
+      "created_at": "2026-11-15T00:14:54.307013",
       "created_by": "official_ai",
       "is_public": true,
       "bank_source": "official_ai"
     },
     {
-      "id": "qb-ai-2daeadfd0da9",
+      "id": "qb-ai-fallback-9f35dd1cd559",
       "concept": "导数",
       "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
+      "question_type": "multiple_choice",
+      "question": "下列关于“导数”的学习方法，合理的有（ ）",
       "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
+        "A. 先理解定义和使用条件",
+        "B. 只背结论，不做练习",
+        "C. 用例题检验自己的理解",
+        "D. 记录错因并定期复习"
       ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-04-10T22:32:08.379491",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
-      "id": "qb-ai-a5dec7b228ca",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
-      "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = (x^2)' e^x + x^2 (e^x)' = 2x e^x + x^2 e^x = e^x (2x + x^2) $。代入 $ x = 1 $ 得 $ f'(1) = e^1 (2 + 1) = 3e $。",
-      "created_at": "2026-04-10T22:33:04.308976",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
-      "id": "qb-ai-7e285d2ceea0",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
-      "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-05-12T10:19:19.310261",
-      "created_by": "official_ai",
-      "is_public": true,
-      "bank_source": "official_ai"
-    },
-    {
-      "id": "qb-ai-0695970d1350",
-      "concept": "导数",
-      "difficulty": "medium",
-      "question_type": "single_choice",
-      "question": "设函数 $ f(x) = x^2 e^x $，则 $ f'(1) $ 的值为？",
-      "options": [
-        "A. $ 3e $",
-        "B. $ 2e $",
-        "C. $ e $",
-        "D. $ 4e $"
-      ],
-      "answer": "A",
-      "analysis": "使用乘积法则：$ f'(x) = 2x e^x + x^2 e^x = e^x (2x + x^2) $，代入 $ x = 1 $ 得 $ f'(1) = e(2 + 1) = 3e $。",
-      "created_at": "2026-05-21T23:47:42.077785",
+      "answer": "ACD",
+      "analysis": "理解定义、例题检验和错因复盘结合，比单纯背结论更有效。",
+      "created_at": "2026-11-15T11:35:05.024461",
       "created_by": "official_ai",
       "is_public": true,
       "bank_source": "official_ai"
     }
   ],
-  "updated_at": "2026-05-21T23:47:42.079520"
+  "updated_at": "2026-11-15T11:35:05.024797"
 }

@@ -1,10 +1,33 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <link rel="icon" type="image/svg+xml" href="assets/images/app-icon.svg">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>知识图谱 - 坊知工</title>
     <link rel="stylesheet" href="assets/css/shared/auth-ui.css?v=20260512-auth-modal-scrollbarhide-v3">
+    <style>
+        body { background: #ffffff; }
+        .global-sidebar { background: #ffffff; }
+        .container, .card, #graph { background: #ffffff; }
+        .container { max-width: 1360px; padding: 30px 28px 46px 78px; }
+        .topbar { padding: 20px 24px; border: 1px solid #d9e7f2; border-radius: 24px; background: rgba(255,255,255,.8); box-shadow: 0 12px 30px rgba(23,43,77,.06); }
+        .title { font-size: 34px; letter-spacing: -.05em; color: #102c57; }
+        .layout { grid-template-columns: minmax(0, 1.65fr) minmax(300px, .75fr); gap: 18px; }
+        .card { border-radius: 22px; box-shadow: 0 16px 38px rgba(23,43,77,.07); }
+        .graph-card { padding: 18px; }
+        .graph-header { padding: 4px 6px 16px; }
+        .graph-title { font-size: 21px; color: #102c57; }
+        .graph-overview { gap: 12px; }
+        .overview-tile { border-radius: 16px; background: linear-gradient(145deg,#f5faff,#fff); }
+        #graph { height: 600px; border: 1px solid #e1ebf5; background: radial-gradient(circle at 50% 45%,#fff 0,#f1f7fc 100%); }
+        .panel { padding: 20px; }
+        .panel h3 { font-size: 18px; color: #102c57; }
+        .controls button { border-radius: 12px; background: #155fc4; }
+        .controls button.btn-danger { background: #b94a45; }
+        .insight-box { background: #f1f8fb; border-color: #d7eced; }
+        @media (max-width: 980px) { .container { padding: 22px 14px 40px; } .topbar { align-items: flex-start; flex-direction: column; } .layout { grid-template-columns: 1fr; } #graph { height: 480px; } }
+    </style>
     <style>
         :root {
             --bg-1: #f4f7fb;
@@ -423,6 +446,30 @@
             .graph-overview { grid-template-columns: 1fr 1fr; }
         }
     </style>
+    <style>
+        body { background: radial-gradient(circle at 8% 0%, #dff3ff 0, transparent 30%), #f4f8fc; }
+        .container { max-width: 1360px; padding: 30px 28px 46px 78px; }
+        .topbar { padding: 20px 24px; border: 1px solid #d9e7f2; border-radius: 24px; background: rgba(255,255,255,.8); box-shadow: 0 12px 30px rgba(23,43,77,.06); }
+        .title { font-size: 34px; letter-spacing: -.05em; color: #102c57; }
+        .layout { grid-template-columns: minmax(0, 1.65fr) minmax(300px, .75fr); gap: 18px; }
+        .card { border-radius: 22px; box-shadow: 0 16px 38px rgba(23,43,77,.07); }
+        .graph-card { padding: 18px; }
+        .graph-title { font-size: 21px; color: #102c57; }
+        .overview-tile { border-radius: 16px; background: linear-gradient(145deg,#f5faff,#fff); }
+        #graph { height: 600px; border: 1px solid #e1ebf5; background: radial-gradient(circle at 50% 45%,#fff 0,#f1f7fc 100%); }
+        .panel { padding: 20px; }
+        .panel h3 { font-size: 18px; color: #102c57; }
+        .controls button { border-radius: 12px; background: #155fc4; }
+        .controls button.btn-danger { background: #b94a45; }
+        .insight-box { background: #f1f8fb; border-color: #d7eced; }
+        @media (max-width: 980px) { .container { padding: 22px 14px 40px; } .topbar { align-items: flex-start; flex-direction: column; } .layout { grid-template-columns: 1fr; } #graph { height: 480px; } }
+    </style>
+    <style>
+        body, .container, .card, #graph { background: #ffffff; }
+        .global-sidebar { background: #ffffff; }
+        #graph { background: #ffffff; }
+    </style>
+    <link rel="stylesheet" href="assets/css/shared/site-theme.css?v=20261113-brand-icon-v2">
 </head>
 <body>
     <button class="global-sidebar-toggle" id="globalSidebarToggle" type="button" aria-label="打开侧栏">☰</button>
@@ -430,13 +477,12 @@
     <aside class="global-sidebar" id="globalSidebar">
         <div class="global-sidebar-scroll">
             <div class="global-sidebar-logo">坊知工</div>
-            <a class="global-sidebar-link" data-side-link="index.html" href="index.html">+ 添加内容</a>
-            <a class="global-sidebar-link" data-side-link="chat.html" href="chat.html">◎ 智能问答</a>
-            <a class="global-sidebar-link" data-side-link="question-bank.html" href="question-bank.html">◎ 题库练习</a>
-            <a class="global-sidebar-link" data-side-link="dashboard.html" href="dashboard.html">◧ 学习仪表盘</a>
-            <a class="global-sidebar-link" data-side-link="knowledge-map.html" href="knowledge-map.html">◇ 知识图谱</a>
+            <a class="global-sidebar-link" data-side-link="index.html" href="index.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="st-nav-label">添加内容</span></a>
+            <a class="global-sidebar-link" data-side-link="chat.html" href="chat.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H8l-5 3 1.2-5.1A8.5 8.5 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5Z"/></svg></span><span class="st-nav-label">智能问答</span></a>
+            <a class="global-sidebar-link" data-side-link="question-bank.html" href="question-bank.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12.3l2.6 2.6L16 9.3"/></svg></span><span class="st-nav-label">题库练习</span></a>
+            <a class="global-sidebar-link" data-side-link="dashboard.html" href="dashboard.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></svg></span><span class="st-nav-label">学习仪表盘</span></a>
             <div class="global-sidebar-section">空间</div>
-            <a class="global-sidebar-link" data-side-link="spaces.html" href="spaces.html">◻ 我的空间</a>
+            <a class="global-sidebar-link" data-side-link="spaces.html" href="spaces.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h3.9l2.1 2.6h6.9a2 2 0 0 1 2 2v7.4a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z"/></svg></span><span class="st-nav-label">我的空间</span></a>
         </div>
     </aside>
 
@@ -545,7 +591,7 @@
     <script src="assets/js/shared/project-local-data.js?v=20260330-authfix"></script>
     <script src="assets/js/shared/space-cloud-store.js?v=20260403-sidebarspaces"></script>
     <script src="assets/js/shared/auth-ui.js?v=20260512-auth-register-autofill-fix"></script>
-    <script src="assets/js/shared/page-shell.js?v=20260416-global-streak"></script>
+    <script src="assets/js/shared/page-shell.js?v=20261113-graph-merge"></script>
     <script src="assets/js/pages/knowledge-map.js?v=20260414-kb-sync-fix"></script>
 </body>
 </html>

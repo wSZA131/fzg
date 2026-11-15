@@ -33,7 +33,9 @@ def _build_local_ocr_fallback(file_storage, provider: str, reason_code: str, rea
         file_bytes=raw,
     )
     text = str(extracted.get("text") or "").strip()
-    if not text:
+    synthetic = not bool(text)
+    if synthetic:
+        # 占位文本只用于前端提示，不代表真实识别结果，调用方不应写入知识库或当作题干。
         stem = os.path.splitext(name)[0].replace("_", " ").replace("-", " ").strip()
         if stem:
             text = f"离线OCR兜底：已接收图片《{name}》。可识别关键词：{stem}。"
@@ -41,13 +43,14 @@ def _build_local_ocr_fallback(file_storage, provider: str, reason_code: str, rea
             text = f"离线OCR兜底：已接收图片《{name}》，请在提问框补充题干文本。"
 
     return {
-        "success": True,
+        "success": not synthetic,
         "text": text,
         "ai_used": False,
         "provider": f"{provider}_local_fallback",
         "error_code": reason_code,
         "error_message": reason_message,
         "fallback_used": True,
+        "synthetic": synthetic,
     }
 
 

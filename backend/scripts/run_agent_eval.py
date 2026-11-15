@@ -29,7 +29,12 @@ def main():
     cases = load_cases(args.cases)
     url = args.base.rstrip("/") + "/api/agent/eval"
 
-    response = requests.post(url, json={"cases": cases}, timeout=120)
+    headers = {}
+    eval_token = str(os.getenv("AGENT_EVAL_TOKEN", "")).strip()
+    if eval_token:
+        headers["X-Eval-Token"] = eval_token
+
+    response = requests.post(url, json={"cases": cases}, headers=headers, timeout=120)
     response.raise_for_status()
     report = response.json()
     report["generated_at"] = datetime.now().isoformat()

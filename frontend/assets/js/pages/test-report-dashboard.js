@@ -1,7 +1,6 @@
 (function () {
   const DATA_CANDIDATES = [
-    'assets/data/test_dashboard_data.json',
-    '../docs/testing/test_dashboard_data.json'
+    'assets/data/test_dashboard_data.json'
   ];
 
   function toNum(v, fallback) {

@@ -1,0 +1,228 @@
+/* Top-right "学习" launcher and docked right-side study panel. */
+
+:root {
+  --study-panel-width: min(420px, 100vw);
+}
+
+.study-launcher {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #14161b;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.study-launcher:hover {
+  border-color: #c9c4f5;
+  background: #fbfbfe;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+}
+
+.study-launcher:focus-visible {
+  outline: 2px solid rgba(79, 70, 229, 0.22);
+  outline-offset: 2px;
+}
+
+.study-launcher svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+  color: #6b7180;
+}
+
+body {
+  transition: padding-right 0.24s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+body.study-panel-open {
+  padding-right: var(--study-panel-width);
+}
+
+body.study-panel-fullscreen {
+  padding-right: 0 !important;
+  overflow: hidden;
+}
+
+.study-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2010;
+  display: flex;
+  flex-direction: column;
+  width: var(--study-panel-width);
+  background: #ffffff;
+  border-left: 1px solid #ececf1;
+  box-shadow: none;
+  transform: translateX(101%);
+  visibility: hidden;
+  transition:
+    transform 0.24s cubic-bezier(0.2, 0.7, 0.2, 1),
+    width 0.2s ease,
+    visibility 0s linear 0.24s;
+}
+
+.study-panel.is-open {
+  transform: translateX(0);
+  visibility: visible;
+  transition:
+    transform 0.24s cubic-bezier(0.2, 0.7, 0.2, 1),
+    width 0.2s ease,
+    visibility 0s linear 0s;
+}
+
+.study-panel.is-fullscreen {
+  width: 100vw;
+}
+
+.study-panel-head {
+  display: flex;
+  flex: 0 0 54px;
+  align-items: center;
+  gap: 4px;
+  height: 54px;
+  padding: 0 8px;
+  border-bottom: 1px solid #ececf1;
+  background: #ffffff;
+}
+
+.study-panel-close,
+.study-panel-add,
+.study-panel-fullscreen {
+  display: inline-flex;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #8a90a0;
+  font-family: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.study-panel-close {
+  font-size: 18px;
+}
+
+.study-panel-add {
+  font-size: 17px;
+}
+
+.study-panel-fullscreen {
+  margin-left: 4px;
+}
+
+.study-panel-fullscreen svg {
+  width: 14px;
+  height: 14px;
+}
+
+.study-panel-close:hover,
+.study-panel-add:hover,
+.study-panel-fullscreen:hover {
+  background: #f1f2f4;
+  color: #14161b;
+}
+
+.study-panel-tabs {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.study-panel-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  max-width: 100%;
+  padding: 0 9px;
+  overflow: hidden;
+  border-radius: 7px;
+  background: #f3f4f6;
+  color: #14161b;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.study-panel-tab > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.study-panel-dot {
+  display: inline-block;
+  flex: 0 0 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.12);
+}
+
+.study-panel-add {
+  color: #6b7180;
+}
+
+.study-panel-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  background: #ffffff;
+}
+
+.study-panel-frame {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  border: 0;
+  background: #ffffff;
+}
+
+@media (max-width: 900px) {
+  :root {
+    --study-panel-width: 380px;
+  }
+}
+
+@media (max-width: 720px) {
+  :root {
+    --study-panel-width: 100vw;
+  }
+
+  body.study-panel-open {
+    padding-right: 0;
+  }
+
+  .study-panel {
+    border-left: 0;
+  }
+
+  .study-launcher {
+    height: 36px;
+    padding: 0 12px;
+  }
+}

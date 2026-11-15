@@ -312,6 +312,14 @@
   }
 
   function renderGraph(nodes, links) {
+    // echarts 来自 CDN，未加载成功时不能让整页脚本中断。
+    if (typeof echarts === 'undefined') {
+      if (dom.graph) {
+        dom.graph.innerHTML = '<div class="empty-state">图表库加载失败，请检查网络后刷新页面；掌握度与复习数据仍可正常查看。</div>';
+      }
+      return;
+    }
+
     if (!state.chart) {
       state.chart = echarts.init(dom.graph);
       window.addEventListener('resize', () => state.chart.resize());

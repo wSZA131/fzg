@@ -18,6 +18,9 @@ SUPPORTED_QUESTION_TYPES = {
 QUESTION_TYPE_ALIASES = {
     "choice": "single_choice",
     "radio": "single_choice",
+    "multi_choice": "multiple_choice",
+    "multiple": "multiple_choice",
+    "multi": "multiple_choice",
     "blank": "fill_blank",
     "fill": "fill_blank",
     "definition": "term_definition",
@@ -132,6 +135,13 @@ def extract_choice_letter(text):
         return ""
     match = re.search(r"([A-Z])", value)
     return match.group(1) if match else ""
+
+
+def extract_choice_letters(text):
+    value = str(text or "").strip().upper()
+    if not value:
+        return []
+    return sorted(set(re.findall(r"[A-Z]", value)))
 
 
 def split_clauses(text):
@@ -293,6 +303,50 @@ def evaluate_single_choice(expected_answer, user_answer, analysis):
         "evidence": {
             "expected_choice": expected_choice or expected_answer,
             "matched_choice": user_choice or normalize_text(user_answer),
+            "risk_flags": [],
+        },
+        "summary": summary,
+    }
+
+
+def evaluate_multiple_choice(expected_answer, user_answer, analysis):
+    expected_letters = extract_choice_letters(expected_answer)
+    user_letters = extract_choice_letters(user_answer)
+    is_correct = bool(expected_letters and user_letters and expected_letters == user_letters)
+    score = 1.0 if is_correct else 0.0
+    expected_text = "".join(expected_letters) or normalize_text(expected_answer)
+    user_text = "".join(user_letters) or normalize_text(user_answer)
+    summary = "选项集合完全匹配。" if is_correct else f"选项集合不匹配，正确答案是 {expected_text}。"
+    feedback = (
+        f"回答正确，所选选项为 {user_text}。"
+        if is_correct
+        else f"回答不正确。你选择了 {user_text or '空'}，正确答案是 {expected_text}。"
+    )
+    if analysis:
+        feedback = f"{feedback}\n解析：{analysis}"
+
+    return {
+        "is_correct": is_correct,
+        "score": score,
+        "expected_answer": expected_answer,
+        "feedback": feedback,
+        "evaluation_method": "rule_multiple_choice",
+        "scoring_type": "multiple_choice",
+        "breakdown": [
+            build_breakdown_item(
+                item="多选项集合匹配",
+                score=score,
+                weight=1.0,
+                verdict="选项集合一致" if is_correct else "选项集合不一致",
+                evidence=[
+                    f"学生作答：{user_text or '空'}",
+                    f"标准答案：{expected_text}",
+                ],
+            )
+        ],
+        "evidence": {
+            "expected_choices": expected_letters,
+            "matched_choices": user_letters,
             "risk_flags": [],
         },
         "summary": summary,
@@ -734,7 +788,9 @@ def evaluate_answer(question_item, user_answer):
     user_text = normalize_text(user_answer or "")
     scoring_type = detect_question_family(question_obj)
 
-    if scoring_type in {"single_choice", "multiple_choice"}:
+    if scoring_type == "multiple_choice":
+        return evaluate_multiple_choice(expected_answer, user_text, analysis)
+    if scoring_type == "single_choice":
         return evaluate_single_choice(expected_answer, user_text, analysis)
     if scoring_type == "fill_blank":
         return evaluate_fill_blank(expected_answer, user_text, analysis)

@@ -68,11 +68,17 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('切换完成状态:', planId, isCompleted);
         
-        // 更新UI
+        // 先乐观更新 UI，失败时回滚，避免用户以为已保存。
         planItem.classList.toggle('completed', isCompleted);
-        
-        // 更新后端
-        updateTaskStatus(planId, isCompleted);
+        syncPlanOverviewFromDom();
+
+        updateTaskStatus(planId, isCompleted).then(function (ok) {
+          if (ok) return;
+          e.target.checked = !isCompleted;
+          planItem.classList.toggle('completed', !isCompleted);
+          syncPlanOverviewFromDom();
+          alert('计划状态保存失败，请检查网络后重试。');
+        });
       }
     });
     
@@ -91,13 +97,16 @@ document.addEventListener('DOMContentLoaded', function() {
           
           setTimeout(() => {
             planItem.remove();
-            // 更新后端
-            deleteTaskBackend(planId);
-            
+            // 更新后端；失败时重新拉取，恢复被乐观移除的条目。
+            deleteTaskBackend(planId).then(function (ok) {
+              if (!ok) loadPlans();
+            });
+
             // 检查是否为空
-            if (document.querySelectorAll('.plan-item').length === 0) {
+            if (document.querySelectorAll('#plan-list .plan-item').length === 0) {
               showEmptyState();
             }
+            syncPlanOverviewFromDom();
           }, 300);
         }
       }
@@ -107,6 +116,126 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // ========== 核心功能函数 ==========
+
+  function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(value);
+  }
+
+  function applyPlanMetrics(total, done) {
+    const totalCount = Math.max(0, Number(total) || 0);
+    const doneCount = Math.min(totalCount, Math.max(0, Number(done) || 0));
+    const remaining = totalCount - doneCount;
+
+    setText('entryPlanDoneCount', doneCount);
+    setText('entryPlanTotalCount', totalCount);
+    setText('entryPlanRemainingCount', remaining);
+    setText('entryPlanListMeta', totalCount ? `${totalCount} 项` : '暂无任务');
+
+    const badge = document.getElementById('entryPlanNavCount');
+    if (badge) {
+      badge.textContent = String(remaining);
+      badge.hidden = remaining <= 0;
+    }
+  }
+
+  function updatePlanOverview(plans) {
+    const rows = Array.isArray(plans) ? plans : [];
+    const done = rows.filter(function (plan) {
+      return !!(plan && plan.completed);
+    }).length;
+    applyPlanMetrics(rows.length, done);
+  }
+
+  function syncPlanOverviewFromDom() {
+    const items = Array.from(document.querySelectorAll('#plan-list .plan-item'));
+    const done = items.filter(function (item) {
+      return item.classList.contains('completed');
+    }).length;
+    applyPlanMetrics(items.length, done);
+  }
+
+  function setPlanFormStatus(text, isError) {
+    const status = document.getElementById('entryPlanFormStatus');
+    if (!status) return;
+    status.textContent = text || '';
+    status.classList.toggle('error', !!isError);
+    status.hidden = !text;
+  }
+
+  function syncPlanDrawerDate() {
+    const dateEl = document.getElementById('entryPlanDrawerDate');
+    if (!dateEl) return;
+    try {
+      dateEl.textContent = new Intl.DateTimeFormat('zh-CN', {
+        month: 'long',
+        day: 'numeric',
+        weekday: 'short'
+      }).format(new Date());
+    } catch (error) {
+      dateEl.textContent = '今天';
+    }
+  }
+
+  function openPlanDrawer() {
+    const drawer = document.getElementById('entryPlanDrawer');
+    const launcher = document.getElementById('entryPlanLauncherBtn');
+    if (!drawer) return;
+
+    if (window.PageShell && typeof window.PageShell.closeGlobalSidebar === 'function') {
+      window.PageShell.closeGlobalSidebar();
+    }
+
+    syncPlanDrawerDate();
+    setPlanFormStatus('');
+    drawer.classList.add('open');
+    drawer.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('entry-plan-drawer-open');
+    if (launcher) {
+      launcher.classList.add('active');
+      launcher.setAttribute('aria-expanded', 'true');
+    }
+    loadPlans();
+    loadReviewReminders();
+  }
+
+  function closePlanDrawer() {
+    const drawer = document.getElementById('entryPlanDrawer');
+    const launcher = document.getElementById('entryPlanLauncherBtn');
+    if (!drawer) return;
+
+    drawer.classList.remove('open');
+    drawer.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('entry-plan-drawer-open');
+    if (launcher) {
+      launcher.classList.remove('active');
+      launcher.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  function initPlanDrawer() {
+    const drawer = document.getElementById('entryPlanDrawer');
+    const launcher = document.getElementById('entryPlanLauncherBtn');
+    const closeBtn = document.getElementById('entryPlanDrawerClose');
+    if (!drawer || !launcher || !closeBtn) return;
+    if (launcher.dataset.planDrawerBound === '1') return;
+    launcher.dataset.planDrawerBound = '1';
+
+    syncPlanDrawerDate();
+    launcher.addEventListener('click', function () {
+      if (drawer.classList.contains('open')) {
+        closePlanDrawer();
+      } else {
+        openPlanDrawer();
+      }
+    });
+    closeBtn.addEventListener('click', closePlanDrawer);
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && drawer.classList.contains('open')) {
+        closePlanDrawer();
+      }
+    });
+  }
   
   // 加载计划
   async function loadPlans() {
@@ -121,6 +250,7 @@ document.addEventListener('DOMContentLoaded', function() {
       renderPlans(data.plans || []);
     } catch (error) {
       console.error('加载计划失败:', error);
+      updatePlanOverview([]);
       const planList = document.getElementById('plan-list');
       if (planList) {
         planList.innerHTML = `<div class="empty-state is-error">${escapeHtml(withSuggestion('学习计划加载失败', error, '刷新页面或稍后重试'))}</div>`;
@@ -135,16 +265,19 @@ document.addEventListener('DOMContentLoaded', function() {
       console.error('找不到 #plan-list 元素');
       return;
     }
+
+    const rows = Array.isArray(plans) ? plans : [];
+    updatePlanOverview(rows);
     
-    if (!plans || plans.length === 0) {
+    if (rows.length === 0) {
       showEmptyState();
       return;
     }
     
     // 按时间排序
-    plans.sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
+    rows.sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
     
-    planList.innerHTML = plans.map(plan => `
+    planList.innerHTML = rows.map(plan => `
       <div class="plan-item ${plan.completed ? 'completed' : ''}" data-id="${escapeHtml(plan.id)}">
         <input type="checkbox" class="plan-check" ${plan.completed ? 'checked' : ''}>
         <div class="plan-content">
@@ -155,7 +288,7 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
     `).join('');
     
-    console.log(`已渲染 ${plans.length} 个计划`);
+    console.log(`已渲染 ${rows.length} 个计划`);
   }
   
   // 显示空状态
@@ -188,16 +321,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const task = taskInput.value.trim();
     
     console.log('输入的值:', { time, task });
+    setPlanFormStatus('');
     
     // 验证
     if (!time) {
-      alert('请选择时间！');
+      setPlanFormStatus('请选择计划时间。', true);
       timeInput.focus();
       return;
     }
     
     if (!task) {
-      alert('请输入学习任务！');
+      setPlanFormStatus('请输入学习任务。', true);
       taskInput.focus();
       return;
     }
@@ -233,10 +367,10 @@ document.addEventListener('DOMContentLoaded', function() {
       // 重新加载计划
       await loadPlans();
 
-      alert('添加成功！');
+      setPlanFormStatus('已加入今日计划。');
     } catch (error) {
       console.error('添加失败:', error);
-      alert(withSuggestion('添加失败', error, '检查输入后重试'));
+      setPlanFormStatus(withSuggestion('添加失败', error, '检查输入后重试'), true);
     } finally {
       // 恢复按钮
       addBtn.disabled = false;
@@ -260,9 +394,10 @@ document.addEventListener('DOMContentLoaded', function() {
       });
       
       await parseApiResponse(response);
-      console.log('状态更新成功');
+      return true;
     } catch (error) {
       console.error('状态更新失败:', error);
+      return false;
     }
   }
   
@@ -279,9 +414,11 @@ document.addEventListener('DOMContentLoaded', function() {
       });
 
       await parseApiResponse(response);
-      console.log('后端删除成功');
+      return true;
     } catch (error) {
       console.error('后端删除失败:', error);
+      alert(withSuggestion('删除计划失败', error, '刷新页面后重试'));
+      return false;
     }
   }
 
@@ -313,4 +450,6 @@ document.addEventListener('DOMContentLoaded', function() {
       list.innerHTML = `<div class="review-reminder-error">${escapeHtml(withSuggestion('提醒加载失败', error, '刷新页面或稍后重试'))}</div>`;
     }
   }
+
+  initPlanDrawer();
 });

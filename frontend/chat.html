@@ -1,15 +1,74 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <link rel="icon" type="image/svg+xml" href="assets/images/app-icon.svg">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>智能问答 - 坊知工</title>
+    <script>
+        (function () {
+            try {
+                if (new URLSearchParams(window.location.search).get('embed') === '1') {
+                    document.documentElement.classList.add('chat-embed-root');
+                }
+            } catch (error) {
+                // 忽略 URL 解析失败。
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="assets/css/shared/auth-ui.css?v=20260512-auth-modal-scrollbarhide-v3">
-    <link rel="stylesheet" href="assets/css/pages/chat-page.css?v=20260403-chatupload">
+    <link rel="stylesheet" href="assets/css/pages/chat-page.css?v=20261113-attachment-v6">
     <link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"></noscript>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+    <style>
+        body, .chat-stage, .composer-card { background: #ffffff; }
+        .global-sidebar { background: #ffffff; }
+        body {
+            background: #ffffff;
+        }
+        .chat-page-shell { max-width: 1280px; padding: 28px 30px 34px 84px; }
+        .chat-topbar {
+            padding: 24px 28px; border: 0; border-radius: 26px;
+            background: linear-gradient(120deg, #102e5c, #146b82);
+            color: #fff; box-shadow: 0 20px 46px rgba(16, 46, 92, .18);
+        }
+        .chat-topbar::after { background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent); }
+        .chat-title { font-size: 32px; letter-spacing: -.04em; }
+        .chat-subtitle { max-width: 760px; color: rgba(255,255,255,.78); }
+        .chat-user-badge { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.25); color: #fff; }
+        .chat-layout { min-height: calc(100vh - 190px); }
+        .chat-stage {
+            border: 1px solid #dce8f2; border-radius: 26px; background: rgba(255,255,255,.72);
+            box-shadow: 0 18px 50px rgba(31, 57, 91, .08); overflow: hidden;
+        }
+        .chat-messages { min-height: 430px; padding: 30px clamp(18px, 5vw, 72px) 140px; }
+        .composer-wrap { padding: 0 clamp(14px, 4vw, 54px) 28px; }
+        .composer-card {
+            border: 1px solid #cfe0ee; border-radius: 24px; background: #fff;
+            box-shadow: 0 18px 42px rgba(20, 54, 91, .14); padding: 14px;
+        }
+        .composer-toolbar { padding-bottom: 12px; border-bottom: 1px solid #edf2f7; }
+        .composer-input { min-height: 92px; font-size: 16px; }
+        .composer-row { align-items: flex-end; gap: 12px; }
+        .composer-send-btn { width: 48px; height: 48px; background: #1168d8; box-shadow: 0 8px 18px rgba(17,104,216,.25); }
+        .composer-send-btn:hover { background: #0e51ad; }
+        .chat-action-btn.primary { background: #1168d8; }
+        .composer-file-input { display: none; }
+        @media (max-width: 700px) {
+            .chat-page-shell { padding: 18px 12px 24px; }
+            .chat-topbar { padding: 20px; }
+            .chat-title { font-size: 26px; }
+            .chat-messages { min-height: 360px; padding-bottom: 120px; }
+        }
+    </style>
+    <style>
+        body { background: #ffffff; }
+        .global-sidebar, .chat-stage, .composer-card { background: #ffffff; }
+    </style>
+    <link rel="stylesheet" href="assets/css/shared/site-theme.css?v=20261113-brand-icon-v2">
+    <link rel="stylesheet" href="assets/css/shared/attachment-ui.css?v=20261113-attachment-v2">
 </head>
 <body>
     <button class="global-sidebar-toggle" id="globalSidebarToggle" type="button" aria-label="打开侧栏">☰</button>
@@ -17,14 +76,13 @@
     <aside class="global-sidebar" id="globalSidebar">
         <div class="global-sidebar-scroll">
             <div class="global-sidebar-logo">坊知工</div>
-            <a class="global-sidebar-link" data-side-link="index.html" href="index.html">+ 添加内容</a>
-            <a class="global-sidebar-link" data-side-link="chat.html" href="chat.html">◎ 智能问答</a>
-            <a class="global-sidebar-link" data-side-link="question-bank.html" href="question-bank.html">◎ 题库练习</a>
-            <a class="global-sidebar-link" data-side-link="dashboard.html" href="dashboard.html">◧ 学习仪表盘</a>
-            <a class="global-sidebar-link" data-side-link="knowledge-map.html" href="knowledge-map.html">◇ 知识图谱</a>
+            <a class="global-sidebar-link" data-side-link="index.html" href="index.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="st-nav-label">添加内容</span></a>
+            <a class="global-sidebar-link" data-side-link="chat.html" href="chat.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H8l-5 3 1.2-5.1A8.5 8.5 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5Z"/></svg></span><span class="st-nav-label">智能问答</span></a>
+            <a class="global-sidebar-link" data-side-link="question-bank.html" href="question-bank.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12.3l2.6 2.6L16 9.3"/></svg></span><span class="st-nav-label">题库练习</span></a>
+            <a class="global-sidebar-link" data-side-link="dashboard.html" href="dashboard.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></svg></span><span class="st-nav-label">学习仪表盘</span></a>
 
             <div class="global-sidebar-section">空间</div>
-            <a class="global-sidebar-link" data-side-link="spaces.html" href="spaces.html">◻ 我的空间</a>
+            <a class="global-sidebar-link" data-side-link="spaces.html" href="spaces.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h3.9l2.1 2.6h6.9a2 2 0 0 1 2 2v7.4a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z"/></svg></span><span class="st-nav-label">我的空间</span></a>
 
             <section class="global-sidebar-history" id="sidebarHistorySection">
                 <button class="global-sidebar-history-toggle" id="sidebarHistoryToggle" type="button" aria-expanded="true">
@@ -58,13 +116,11 @@
                                     <span class="status-dot" id="aiStatusDot"></span>
                                     <span id="aiStatusText">检测中...</span>
                                 </div>
-                                <button class="chat-action-btn" id="kbSearchBtn" type="button">检索知识库</button>
-                                <button class="chat-action-btn" id="kbSaveBtn" type="button">存入知识库</button>
                                 <button class="chat-action-btn primary" id="newChatBtn" type="button">+ 新对话</button>
                             </div>
                             <div class="composer-toolbar-group">
                                 <input class="composer-file-input" id="composerFileInput" type="file" multiple>
-                                <button class="chat-action-btn" id="composerAttachBtn" type="button">上传文件</button>
+                                <button class="chat-action-btn" id="composerAttachBtn" type="button">添加附件</button>
                             </div>
                         </div>
                         <div class="composer-meta">
@@ -101,7 +157,8 @@
     <script src="assets/js/shared/project-local-data.js?v=20260330-authfix"></script>
     <script src="assets/js/shared/space-cloud-store.js?v=20260403-sidebarspaces"></script>
     <script src="assets/js/shared/auth-ui.js?v=20260512-auth-register-autofill-fix"></script>
-    <script src="assets/js/shared/page-shell.js?v=20260416-global-streak"></script>
-    <script src="assets/js/pages/chat-page.js?v=20260416-hide-internal"></script>
+    <script src="assets/js/shared/page-shell.js?v=20261113-graph-merge"></script>
+    <script src="assets/js/shared/attachment-handoff.js?v=20261113-attachment-v1"></script>
+    <script src="assets/js/pages/chat-page.js?v=20261113-attachment-v8"></script>
 </body>
 </html>

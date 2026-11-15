@@ -1,0 +1,750 @@
+/* ==========================================================
+   学习看板 · 浅色版
+   与全站白底黑字保持一致，同时保留紧凑的数据看板结构
+   ========================================================== */
+
+body.dashboard-page {
+  background: #ffffff;
+  color: var(--st-ink, #14161b);
+}
+
+/* ---------------- 顶部标题栏 ---------------- */
+
+.dash-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 2px 2px 16px;
+}
+
+.dash-title {
+  margin: 0;
+  color: var(--st-ink, #14161b);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.dash-subtitle {
+  margin: 5px 0 0;
+  color: var(--st-muted, #8a90a0);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.dash-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dash-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--st-line-strong, #e2e4ea);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #5b6170;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.dash-chip b {
+  color: var(--st-ink, #14161b);
+  font-weight: 600;
+}
+
+.dash-chip-link:hover {
+  border-color: #d9dbe2;
+  background: var(--st-surface, #f7f7f9);
+  color: var(--st-ink, #14161b);
+}
+
+.dash-refresh {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 13px;
+  border: 1px solid #dcd8fb;
+  border-radius: 999px;
+  background: var(--st-accent-soft, #eef1ff);
+  color: var(--st-accent-deep, #4338ca);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.dash-refresh:hover {
+  border-color: #cfc9fa;
+  background: #e6e9ff;
+}
+
+.dash-refresh:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+/* ---------------- 工具栏 ---------------- */
+
+.dash-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--st-line, #ececf1);
+}
+
+.dash-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dash-toolbar-label {
+  color: var(--st-faint, #a2a7b4);
+  font-size: 11px;
+}
+
+.dash-view-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--st-line, #ececf1);
+  border-radius: 6px;
+  background: var(--st-surface-deep, #fbfbfc);
+  color: #5b6170;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.dash-toolbar-note {
+  color: #b3b7c2;
+  font-size: 10.5px;
+}
+
+.dash-toolbar-note b {
+  color: #7c8290;
+  font-weight: 500;
+}
+
+.dash-launcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--st-line, #ececf1);
+  border-radius: 6px;
+  background: #ffffff;
+  color: #6b7180;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: none;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.dash-launcher-index {
+  color: #b3b7c2;
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+}
+
+.dash-launcher:hover {
+  border-color: #d9dbe2;
+  background: var(--st-surface-deep, #fbfbfc);
+  color: var(--st-ink, #14161b);
+}
+
+.dash-launcher.active {
+  border-color: #dcd8fb;
+  background: var(--st-accent-soft, #eef1ff);
+  color: var(--st-accent-deep, #4338ca);
+  box-shadow: none;
+}
+
+.dash-launcher.active .dash-launcher-index {
+  color: var(--st-accent, #4f46e5);
+}
+
+/* ---------------- 指标总览 ---------------- */
+
+.dash-summary {
+  margin-bottom: 14px;
+  padding: 0;
+  border: 1px solid var(--st-line, #ececf1);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.03);
+  color: var(--st-ink, #14161b);
+  overflow: hidden;
+}
+
+.dash-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--st-line, #ececf1);
+  background: var(--st-surface-deep, #fbfbfc);
+}
+
+.dash-panel-title {
+  color: #3c4250;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dash-panel-meta {
+  color: var(--st-faint, #a2a7b4);
+  font-size: 11px;
+}
+
+body.dashboard-page .hero-metrics {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  padding: 0;
+}
+
+body.dashboard-page .hero-metric {
+  min-height: 0;
+  padding: 14px 16px;
+  border: 0;
+  border-right: 1px solid var(--st-line, #ececf1);
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+body.dashboard-page .hero-metric:last-child {
+  border-right: 0;
+}
+
+body.dashboard-page .hero-metric-label {
+  margin-bottom: 7px;
+  color: var(--st-muted, #8a90a0);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+body.dashboard-page .hero-metric-value {
+  color: var(--st-ink, #14161b);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+body.dashboard-page .hero-metric:first-child .hero-metric-value {
+  color: var(--st-accent, #4f46e5);
+}
+
+body.dashboard-page .hero-metric-note {
+  display: none;
+}
+
+/* ---------------- 图表矩阵 ---------------- */
+
+.dash-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.dash-chart-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 192px;
+  padding: 14px;
+  border: 1px solid var(--st-line, #ececf1);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.03);
+}
+
+.dash-chart-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.dash-chart-title {
+  color: #3c4250;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dash-chart-meta {
+  color: var(--st-faint, #a2a7b4);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.dash-chart-body {
+  position: relative;
+  flex: 1 1 auto;
+  height: 142px;
+  min-height: 142px;
+}
+
+.dash-chart-body canvas {
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 150px;
+}
+
+/* ---------------- 分析区：图谱 + 认知判断 ---------------- */
+
+body.dashboard-page .card-desc,
+body.dashboard-page .insight-panel-note,
+body.dashboard-page .persona-desc,
+body.dashboard-page .persona-metric-note,
+body.dashboard-page .mastery-cell-meta,
+body.dashboard-page .mastery-story {
+  display: none;
+}
+
+/* 能力对齐属于演示型说明，看板以图表为主，默认收起 */
+body.dashboard-page .capability-alignment {
+  display: none;
+}
+
+.dashboard-analysis-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
+  margin-bottom: 14px;
+}
+
+body.dashboard-page .dashboard-analysis-grid > .card {
+  height: 100%;
+}
+
+/* 内嵌知识图谱 */
+body.dashboard-page .dashboard-graph-card {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0;
+  padding: 16px;
+}
+
+body.dashboard-page .dashboard-graph-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+body.dashboard-page .dashboard-graph-head .card-title,
+body.dashboard-page .dashboard-cognitive-head .card-title,
+body.dashboard-page .dashboard-profile-head .card-title {
+  margin-top: 0;
+}
+
+.dashboard-graph-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--st-muted, #8a90a0);
+  font-size: 11px;
+}
+
+.dashboard-graph-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.graph-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.graph-dot-doc {
+  background: #6366f1;
+}
+
+.graph-dot-weak {
+  background: #ef4444;
+}
+
+.graph-dot-mid {
+  background: #f59e0b;
+}
+
+.graph-dot-strong {
+  background: #10b981;
+}
+
+body.dashboard-page .dashboard-graph {
+  flex: 1 1 auto;
+  height: 380px;
+  min-height: 320px;
+  border: 1px solid var(--st-line, #ececf1);
+  border-radius: 14px;
+  background: var(--st-surface-deep, #fbfbfc);
+  overflow: hidden;
+}
+
+body.dashboard-page .dashboard-graph .empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--st-faint, #a2a7b4);
+  font-size: 12px;
+}
+
+/* 认知判断副卡 */
+body.dashboard-page .dashboard-cognitive-card {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0;
+  padding: 16px;
+}
+
+.dashboard-cognitive-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.dash-subhead {
+  margin: 6px 0 8px;
+  color: var(--st-muted, #8a90a0);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+body.dashboard-page .dashboard-cognitive-card .forecast-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  margin-top: 0;
+}
+
+body.dashboard-page .dashboard-cognitive-card .forecast-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+body.dashboard-page .dashboard-cognitive-card .forecast-card-label {
+  color: var(--st-muted, #8a90a0);
+  font-size: 11px;
+}
+
+body.dashboard-page .dashboard-cognitive-card .forecast-card-value {
+  margin: 0;
+  color: var(--st-ink, #14161b);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+body.dashboard-page .dashboard-cognitive-card .forecast-card-note {
+  display: none;
+}
+
+body.dashboard-page .dashboard-cognitive-card .dash-mini-chart {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 170px;
+  margin-top: 0;
+}
+
+/* ---------------- 学习者画像 ---------------- */
+
+body.dashboard-page .dashboard-profile-card {
+  margin-top: 0;
+  padding: 16px;
+}
+
+.dashboard-profile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.profile-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--st-line, #ececf1);
+  border-radius: 999px;
+  background: var(--st-surface-deep, #fbfbfc);
+  color: var(--st-muted, #8a90a0);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.profile-chip b {
+  color: var(--st-ink, #14161b);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dashboard-profile-body {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.profile-chart-panel {
+  padding: 12px;
+  border: 1px solid var(--st-line, #ececf1);
+  border-radius: 14px;
+  background: var(--st-surface-deep, #fbfbfc);
+}
+
+.profile-chart-title {
+  margin-bottom: 8px;
+  color: #5b6170;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.profile-chart-box {
+  position: relative;
+  height: 220px;
+}
+
+.profile-chart-box canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.profile-chart-box .dash-chart-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--st-faint, #a2a7b4);
+  font-size: 12px;
+}
+
+.profile-donut-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.profile-donut-center b {
+  display: block;
+  color: var(--st-ink, #14161b);
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.profile-donut-center span {
+  color: var(--st-faint, #a2a7b4);
+  font-size: 10px;
+}
+
+.profile-donut-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 12px;
+  margin-top: 8px;
+  color: var(--st-muted, #8a90a0);
+  font-size: 10.5px;
+}
+
+.profile-donut-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.profile-donut-legend i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+}
+
+/* 兼容旧的迷你图表容器 */
+.dash-mini-chart {
+  position: relative;
+  height: 180px;
+  margin-top: 8px;
+}
+
+.dash-mini-chart canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.dash-mini-chart .dash-chart-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--st-faint, #a2a7b4);
+  font-size: 12px;
+}
+
+body.dashboard-page .metric-row {
+  gap: 10px;
+  margin-top: 14px;
+}
+
+body.dashboard-page .insight-duo {
+  gap: 10px;
+  margin-top: 14px;
+}
+
+body.dashboard-page .capability-alignment {
+  margin-top: 14px;
+}
+
+/* ---------------- 响应式 ---------------- */
+
+@media (max-width: 1400px) {
+  body.dashboard-page .hero-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  body.dashboard-page .hero-metric {
+    border-bottom: 1px solid var(--st-line, #ececf1);
+  }
+
+  body.dashboard-page .hero-metric:nth-child(3n) {
+    border-right: 0;
+  }
+
+  body.dashboard-page .hero-metric:nth-child(n + 4) {
+    border-bottom: 0;
+  }
+
+  .dash-chart-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1200px) {
+  .dashboard-analysis-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-profile-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 980px) {
+  body.dashboard-page .dashboard-container {
+    padding: 76px 18px 48px;
+  }
+
+  .dash-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dash-header-actions {
+    justify-content: flex-start;
+  }
+
+  body.dashboard-page .hero-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.dashboard-page .hero-metric {
+    border-right: 1px solid var(--st-line, #ececf1);
+    border-bottom: 1px solid var(--st-line, #ececf1);
+  }
+
+  body.dashboard-page .hero-metric:nth-child(2n) {
+    border-right: 0;
+  }
+
+  body.dashboard-page .hero-metric:nth-child(n + 5) {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  body.dashboard-page .dashboard-container {
+    padding: 72px 14px 40px;
+  }
+
+  .dash-title {
+    font-size: 21px;
+  }
+
+  .dash-chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dash-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  body.dashboard-page .hero-metric-value {
+    font-size: 21px;
+  }
+
+  body.dashboard-page .dashboard-graph {
+    height: 320px;
+  }
+
+  .profile-chart-box {
+    height: 200px;
+  }
+}

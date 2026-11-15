@@ -22,6 +22,8 @@ This document defines stable response fields for key learner-facing APIs.
 
 ## GET /api/recommendations
 
+探索推荐只返回外部资源（Wikipedia / Wikibooks / OpenStax / Oak / Google Scholar / Google Books / Google Videos / Google Play Books / YouTube），不返回用户空间资料、AI 讲解或题库任务。
+
 - success: bool
 - request_id: string
 - user_id: string
@@ -34,19 +36,70 @@ This document defines stable response fields for key learner-facing APIs.
 - recommendation_context.generated_at: string (ISO datetime)
 
 recommendation fields:
+- id: string
 - concept: string
 - mastery: number|null
 - resource_type: string
+- resource_kind: one of open_article|open_textbook|open_lesson|open_paper|open_video|external_book
+- resource_action_label: string
 - title: string
 - reason: string
+- reason_codes: string[]
 - priority: number
+- score: number
 - recommend_time: string
+- duration_minutes: number
+- difficulty: one of easy|medium|hard
+- provider: string (`Wikipedia`, `Wikibooks`, `OpenStax`, `Oak National Academy`, `Google Scholar`, `Google Books`, `Google Videos`, `Google Play Books`, `YouTube`)
+- cover_url: string (开放 API 缩略图或空字符串)
+- action: object
+- action.type: string
 - strategy_tags: string[]
 - evidence_brief: string
 - source_evidence: object
 - source_evidence.profile: object
 - source_evidence.knowledge_graph: object
 - source_evidence.diagnosis: object
+- source_evidence.recommendation: object
+- source_evidence.recommendation.sources: string[] (`weakness`, `review_due`, `interest`, `open_resource`)
+
+Query params:
+- scene: string, default home_explore
+- limit: number, 1-12
+- refresh: boolean
+- exclude: comma-separated resource ids
+
+Response cache fields:
+- cache_hit: bool
+- engine_version: number
+- excluded_count: number
+- audit: object (only populated when recommendations are recomputed)
+- audit.open_queries: string[]
+- audit.open_resource_count: number
+- audit.open_providers: string[]
+
+## POST /api/recommendations/feedback
+
+Request body:
+
+```json
+{
+  "scene": "home_explore",
+  "events": [
+    {
+      "resource_id": "res-practice-derivative",
+      "event_type": "impression",
+      "position": 1,
+      "concept": "导数",
+      "resource_kind": "practice_bank"
+    }
+  ]
+}
+```
+
+- event_type: one of impression|click|complete|dismiss|not_interested
+- The endpoint records events in `user_event` with suffix `recommendation`.
+- `click` / `complete` / `dismiss` / `not_interested` invalidate the user's recommendation cache; `impression` does not.
 
 ## GET /api/knowledge_graph/path
 

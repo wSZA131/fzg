@@ -379,3 +379,496 @@
     align-items: flex-start;
   }
 }
+/* ========== 学习计划右侧停靠面板 ========== */
+
+:root {
+  --entry-plan-drawer-width: min(420px, 100vw);
+}
+
+body {
+  transition: padding-right 0.24s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+body.entry-plan-drawer-open {
+  padding-right: var(--entry-plan-drawer-width);
+  overflow: hidden;
+}
+
+.entry-plan-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1460;
+  display: flex;
+  flex-direction: column;
+  width: var(--entry-plan-drawer-width);
+  border-left: 1px solid #ececf1;
+  background: #ffffff;
+  transform: translateX(101%);
+  visibility: hidden;
+  transition:
+    transform 0.24s cubic-bezier(0.2, 0.7, 0.2, 1),
+    visibility 0s linear 0.24s;
+}
+
+.entry-plan-drawer.open {
+  transform: translateX(0);
+  visibility: visible;
+  transition:
+    transform 0.24s cubic-bezier(0.2, 0.7, 0.2, 1),
+    visibility 0s linear 0s;
+}
+
+.entry-plan-drawer-shell {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.entry-plan-drawer-head {
+  display: flex;
+  flex: 0 0 54px;
+  align-items: center;
+  gap: 6px;
+  height: 54px;
+  padding: 0 8px;
+  border-bottom: 1px solid #ececf1;
+  background: #ffffff;
+}
+
+.entry-plan-drawer-close {
+  display: inline-flex;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #8a90a0;
+  font-family: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.entry-plan-drawer-close:hover {
+  background: #f1f2f4;
+  color: #14161b;
+}
+
+.entry-plan-drawer-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 7px;
+  background: #f3f4f6;
+  color: #14161b;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.entry-plan-drawer-tab i {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.12);
+}
+
+.entry-plan-drawer-date {
+  margin-left: auto;
+  padding-right: 8px;
+  color: #a2a7b4;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.entry-plan-drawer-body {
+  flex: 1;
+  min-height: 0;
+  padding: 24px 20px 30px;
+  overflow-y: auto;
+  background: #ffffff;
+}
+
+.entry-plan-eyebrow {
+  display: block;
+  color: #8a90a0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+}
+
+.entry-plan-intro h2 {
+  margin-top: 7px;
+  color: #14161b;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+}
+
+.entry-plan-intro p {
+  margin-top: 6px;
+  color: #8a90a0;
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+.entry-plan-progress {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 20px 0;
+}
+
+.entry-plan-progress > div {
+  padding: 12px 10px;
+  border: 1px solid #ececf1;
+  border-radius: 12px;
+  background: #fafafb;
+}
+
+.entry-plan-progress strong {
+  display: block;
+  color: #14161b;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.entry-plan-progress span {
+  display: block;
+  margin-top: 5px;
+  color: #8a90a0;
+  font-size: 10.5px;
+  line-height: 1.3;
+}
+
+.entry-plan-add-card {
+  padding: 14px;
+  border: 1px solid #ececf1;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.entry-plan-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.entry-plan-section-head h3 {
+  color: #14161b;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.entry-plan-section-head > span {
+  color: #a2a7b4;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.entry-plan-drawer .entry-plan-form {
+  display: grid;
+  grid-template-columns: 102px minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.entry-plan-drawer .entry-plan-form input {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  padding: 0 11px;
+  border: 1px solid #e2e4ea;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #14161b;
+  font-family: inherit;
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.entry-plan-drawer .entry-plan-form input::placeholder {
+  color: #a2a7b4;
+}
+
+.entry-plan-drawer .entry-plan-form input:focus {
+  border-color: #c9c4f5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
+}
+
+.entry-plan-drawer .entry-plan-form button {
+  grid-column: 1 / -1;
+  height: 38px;
+  border: 0;
+  border-radius: 9px;
+  background: #14161b;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.16s ease, opacity 0.16s ease;
+}
+
+.entry-plan-drawer .entry-plan-form button:hover {
+  background: #000000;
+}
+
+.entry-plan-drawer .entry-plan-form button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.entry-plan-form-status {
+  grid-column: 1 / -1;
+  margin-top: 1px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f5f3ff;
+  color: #4338ca;
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+.entry-plan-form-status.error {
+  background: #fff5f5;
+  color: #b42318;
+}
+
+.entry-plan-form-status[hidden] {
+  display: none;
+}
+
+.entry-plan-tasks {
+  margin-top: 24px;
+}
+
+.entry-plan-drawer .entry-plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  max-height: none;
+  margin-top: 12px;
+  padding-right: 0;
+  overflow: visible;
+}
+
+.entry-plan-drawer .plan-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid #ececf1;
+  border-radius: 11px;
+  background: #ffffff;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.entry-plan-drawer .plan-item:hover {
+  border-color: #e1e2e8;
+  background: #fbfbfc;
+}
+
+.entry-plan-drawer .plan-check {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  accent-color: #4f46e5;
+  cursor: pointer;
+}
+
+.entry-plan-drawer .plan-content {
+  display: flex;
+  flex: 1;
+  align-items: flex-start;
+  gap: 9px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.entry-plan-drawer .plan-time {
+  flex: 0 0 auto;
+  min-width: 48px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: #f3f4f6;
+  color: #5b6170;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.entry-plan-drawer .plan-task {
+  flex: 1;
+  padding-top: 1px;
+  color: #3c4250;
+  font-size: 12.5px;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.entry-plan-drawer .delete-btn {
+  display: inline-flex;
+  flex: 0 0 24px;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #a2a7b4;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.65;
+  transition: background 0.16s ease, color 0.16s ease, opacity 0.16s ease;
+}
+
+.entry-plan-drawer .delete-btn:hover {
+  background: #fef2f2;
+  color: #b42318;
+  opacity: 1;
+}
+
+.entry-plan-drawer .plan-item.completed {
+  background: #fafafb;
+  border-color: #ececf1;
+}
+
+.entry-plan-drawer .plan-item.completed .plan-time {
+  color: #a2a7b4;
+  text-decoration: line-through;
+}
+
+.entry-plan-drawer .plan-item.completed .plan-task {
+  color: #a2a7b4;
+  text-decoration: line-through;
+}
+
+.entry-plan-drawer .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 132px;
+  padding: 24px 18px;
+  border: 1px dashed #dfe2e8;
+  border-radius: 12px;
+  background: #fbfbfc;
+  color: #8a90a0;
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.entry-plan-drawer .empty-state small {
+  margin-top: 4px;
+  color: #a2a7b4;
+  font-size: 10.5px;
+}
+
+.entry-plan-drawer .empty-state.is-error {
+  color: #b42318;
+  border-color: #fecdd3;
+  background: #fffafa;
+}
+
+.entry-plan-review-card {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #ececf1;
+}
+
+.entry-plan-review-note {
+  margin: 6px 0 12px;
+  color: #8a90a0;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.entry-plan-drawer .entry-plan-reminder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.entry-plan-drawer .review-reminder-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px;
+  border: 1px solid #ececf1;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: none;
+  color: #3c4250;
+  font-size: 11.5px;
+}
+
+.entry-plan-drawer .review-reminder-item strong {
+  color: #4338ca;
+  font-size: 10.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.entry-plan-drawer .review-reminder-loading,
+.entry-plan-drawer .review-reminder-empty,
+.entry-plan-drawer .review-reminder-error {
+  padding: 11px 10px;
+  border: 1px solid #ececf1;
+  border-radius: 9px;
+  background: #fbfbfc;
+  color: #8a90a0;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.entry-plan-drawer .review-reminder-error {
+  color: #b42318;
+  border-color: #fecdd3;
+  background: #fffafa;
+}
+
+@media (max-width: 760px) {
+  :root {
+    --entry-plan-drawer-width: 100vw;
+  }
+
+  body.entry-plan-drawer-open {
+    padding-right: 0;
+  }
+
+  .entry-plan-drawer {
+    border-left: 0;
+  }
+
+  .entry-plan-drawer-body {
+    padding: 20px 16px 26px;
+  }
+}

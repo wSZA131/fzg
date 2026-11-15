@@ -1,5 +1,7 @@
 (function () {
   const API_BASE_STORAGE_KEY = 'fangzhigong_api_base';
+  // 标记"用户显式设置过地址"，只有显式设置才优先于页面推断，避免历史缓存污染。
+  const API_BASE_EXPLICIT_KEY = 'fangzhigong_api_base_explicit';
 
   function normalizeApiBase(base) {
     const value = String(base || '').trim();
@@ -69,14 +71,18 @@
     const fromQuery = getApiBaseFromQuery();
     if (fromQuery) {
       localStorage.setItem(API_BASE_STORAGE_KEY, fromQuery);
+      localStorage.setItem(API_BASE_EXPLICIT_KEY, '1');
       return fromQuery;
     }
 
-    // 优先使用当前页面推断结果，避免历史 localStorage 污染导致持续“后端离线”。
+    // 用户显式设置过地址时优先使用，否则用当前页面推断，避免历史缓存导致持续“后端离线”。
+    const isExplicit = localStorage.getItem(API_BASE_EXPLICIT_KEY) === '1';
+    const stored = normalizeApiBase(localStorage.getItem(API_BASE_STORAGE_KEY));
+    if (isExplicit && stored) return stored;
+
     const inferred = inferApiBaseFromLocation();
     if (inferred) return inferred;
 
-    const stored = normalizeApiBase(localStorage.getItem(API_BASE_STORAGE_KEY));
     if (stored) return stored;
 
     const defaults = defaultApiBaseCandidates();
@@ -87,6 +93,7 @@
     const normalized = normalizeApiBase(newBase);
     if (!normalized) return '';
     localStorage.setItem(API_BASE_STORAGE_KEY, normalized);
+    localStorage.setItem(API_BASE_EXPLICIT_KEY, '1');
     return normalized;
   }
 

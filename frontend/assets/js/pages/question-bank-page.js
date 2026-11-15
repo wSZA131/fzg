@@ -1265,6 +1265,13 @@
         error: ''
       });
       clearPendingQuestion();
+      // 判题会回写掌握度、诊断与推荐，通知仪表盘/知识图谱/首页计划卡片刷新。
+      try {
+        window.dispatchEvent(new Event('knowledge:updated'));
+        localStorage.setItem('fangzhigong_knowledge_updated_at', String(Date.now()));
+      } catch (error) {
+        // 事件派发失败不影响判题结果展示。
+      }
     } catch (error) {
       removeTypingMessage();
       addMessage(withSuggestion('提交答案失败', error, '稍后重试或结束本题'), 'ai', {

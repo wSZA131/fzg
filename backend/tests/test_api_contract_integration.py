@@ -1,3 +1,4 @@
+import json
 import unittest
 from unittest.mock import patch
 
@@ -14,6 +15,11 @@ class TestApiContractIntegration(unittest.TestCase):
     def setUp(self):
         backend_app.app.testing = True
         self.client = backend_app.app.test_client()
+
+    def _use_guest(self, guest_user_id="guest_apiuser01"):
+        signed = backend_app.sign_guest_session_cookie_value(guest_user_id)
+        self.client.set_cookie(backend_app.GUEST_SESSION_COOKIE_NAME, signed, domain="localhost")
+        return guest_user_id
 
     def test_profile_contract(self):
         def fake_load_events(_, suffix):
@@ -114,13 +120,13 @@ class TestApiContractIntegration(unittest.TestCase):
                 "question": "我不会导数",
                 "stream": True,
             })
+            # SSE 是惰性生成器，必须在 patch 生效期间消费响应，否则会调用真实兜底逻辑。
+            body = resp.get_data(as_text=True)
 
         self.assertEqual(resp.status_code, 200)
         self.assertIn("text/event-stream", resp.content_type)
         self.assertEqual(resp.headers.get("X-Accel-Buffering"), "no")
         self.assertIn("no-cache", str(resp.headers.get("Cache-Control") or ""))
-
-        body = resp.get_data(as_text=True)
         events = []
         for line in body.splitlines():
             if not line.startswith("data:"):
@@ -178,11 +184,32 @@ class TestApiContractIntegration(unittest.TestCase):
                 }]
             return []
 
-        with patch.object(backend_app, "get_user_profile", return_value={}), \
-             patch.object(backend_app, "set_user_profile", return_value=None), \
-             patch.object(backend_app, "load_user_event_list", side_effect=fake_load_events), \
-             patch.object(backend_app, "get_user_knowledge", return_value={"concepts": [{"concept": "导数", "mastery": 0.25}], "relations": [], "deleted_concepts": []}):
-            resp = self.client.get("/api/recommendations?user_id=u_api&limit=3")
+        fake_open_resource = {
+            "id": "wiki-derivative-contract",
+            "title": "导数",
+            "concept": "导数",
+            "resource_kind": "open_article",
+            "provider": "Wikipedia",
+            "duration_minutes": 5,
+            "action": {
+                "type": "external_course",
+                "concept": "导数",
+                "url": "https://zh.wikipedia.org/wiki/导数",
+            },
+            "learning_styles": ["visual"],
+            "quality_score": 0.78,
+        }
+        previous_testing = backend_app.app.testing
+        backend_app.app.testing = False
+        try:
+            with patch.object(backend_app, "get_user_profile", return_value={}), \
+                 patch.object(backend_app, "set_user_profile", return_value=None), \
+                 patch.object(backend_app, "load_user_event_list", side_effect=fake_load_events), \
+                 patch.object(backend_app, "get_user_knowledge", return_value={"concepts": [{"concept": "导数", "mastery": 0.25}], "relations": [], "deleted_concepts": []}), \
+                 patch.object(backend_app, "fetch_open_resources", return_value=[fake_open_resource]):
+                resp = self.client.get("/api/recommendations?user_id=u_api&limit=3")
+        finally:
+            backend_app.app.testing = previous_testing
 
         self.assertEqual(resp.status_code, 200)
         data = resp.get_json()
@@ -193,6 +220,8 @@ class TestApiContractIntegration(unittest.TestCase):
         items = data.get("items", [])
         self.assertTrue(len(items) >= 1)
         first = items[0]
+        self.assertIn("resource_kind", first)
+        self.assertIn("open_article", {item.get("resource_kind") for item in items})
         self.assertIn("evidence_brief", first)
         self.assertIn("source_evidence", first)
         self.assertIn("strategy_tags", first)
@@ -330,6 +359,7 @@ class TestApiContractIntegration(unittest.TestCase):
         self.assertEqual(data.get("required_field"), "concept")
 
     def test_question_bank_draw_scope_contract(self):
+        guest_user_id = self._use_guest()
         bank = [
             {
                 "id": "qb-ai-1",
@@ -413,7 +443,7 @@ class TestApiContractIntegration(unittest.TestCase):
                 "answer": "关键步骤",
                 "analysis": "动态题解析",
                 "bank_source": "dynamic_personal",
-                "created_by": "u_api",
+                "created_by": guest_user_id,
             },
             {
                 "id": "qb-mine-1",
@@ -425,7 +455,7 @@ class TestApiContractIntegration(unittest.TestCase):
                 "answer": "B",
                 "analysis": "我的题解析",
                 "bank_source": "user_custom",
-                "created_by": "u_api",
+                "created_by": guest_user_id,
             },
             {
                 "id": "qb-other-1",
@@ -470,6 +500,7 @@ class TestApiContractIntegration(unittest.TestCase):
         self.assertEqual(both_data.get("question", {}).get("bank_source"), "official_ai")
 
     def test_question_bank_list_scope_contract(self):
+        guest_user_id = self._use_guest()
         bank = [
             {
                 "id": "qb-ai-1",
@@ -505,7 +536,7 @@ class TestApiContractIntegration(unittest.TestCase):
                 "answer": "关键步骤",
                 "analysis": "动态题解析",
                 "bank_source": "dynamic_personal",
-                "created_by": "u_api",
+                "created_by": guest_user_id,
             },
             {
                 "id": "qb-mine-1",
@@ -517,7 +548,7 @@ class TestApiContractIntegration(unittest.TestCase):
                 "answer": "B",
                 "analysis": "我的题解析",
                 "bank_source": "user_custom",
-                "created_by": "u_api",
+                "created_by": guest_user_id,
             },
             {
                 "id": "qb-other-1",
@@ -784,6 +815,7 @@ class TestApiContractIntegration(unittest.TestCase):
 
     def test_behavior_track_contract(self):
         captured = {}
+        guest_user_id = self._use_guest()
 
         def fake_append(user_id, suffix, item):
             captured["user_id"] = user_id
@@ -792,7 +824,7 @@ class TestApiContractIntegration(unittest.TestCase):
 
         with patch.object(backend_app, "append_user_event", side_effect=fake_append):
             resp = self.client.post("/api/behavior/track", json={
-                "user_id": "u_api",
+                "user_id": guest_user_id,
                 "behavior_type": "page_stay",
                 "page": "dashboard",
                 "duration_seconds": 128.4,
@@ -803,7 +835,7 @@ class TestApiContractIntegration(unittest.TestCase):
         data = resp.get_json()
         self.assertTrue(data.get("success"))
         self.assertTrue(data.get("accepted"))
-        self.assertEqual(captured.get("user_id"), "u_api")
+        self.assertEqual(captured.get("user_id"), guest_user_id)
         self.assertEqual(captured.get("suffix"), "behavior")
         self.assertEqual(captured.get("item", {}).get("behavior_type"), "page_stay")
         self.assertEqual(captured.get("item", {}).get("page"), "dashboard")

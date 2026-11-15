@@ -181,39 +181,28 @@ def build_rule_based_tutor_response(
 
     answer = "\n".join(analysis_lines + [""] + explain_lines + [""] + advice_lines + [""] + practice_lines)
 
-    kb_tool_name = "tool_graph_rag_search" if route_type == "graph_rag" else "tool_search_learning_kb"
+    # 离线兜底走的是本地规则（search_kb + 本地计划生成），并未调用 LangChain 工具。
+    # 这里只上报真实发生的动作，避免前端展示从未发生的“工具调用链”。
     steps_log = [
         {
-            "tool_name": kb_tool_name,
-            "tool_input": {"student_id": uid, "query": question_text},
-            "tool_output_summary": f"命中 {len(hits)} 条资料，public_source={kb_result.get('public_source', 'unavailable')}",
-            "latency_ms": max(1, int(kb_result.get("query_time_ms", 1) or 1)),
-            "status": "success",
-        },
-        {
-            "tool_name": "tool_get_student_mastery",
-            "tool_input": {"student_id": uid, "topic": focus_topic},
+            "tool_name": "local_rule_fallback",
+            "tool_input": {"query": question_text or "", "topic": focus_topic},
             "tool_output_summary": (
-                f"topic={mastery_info.get('concept') or focus_topic}, mastery={mastery_info.get('mastery')}"
+                f"本地规则处理：资料命中 {len(hits)} 条，"
+                f"掌握度={mastery_info.get('mastery')}，生成 {len(plan_items)} 条学习任务"
             ),
-            "latency_ms": 1,
+            "latency_ms": max(0, int(kb_result.get("query_time_ms", 0) or 0)),
             "status": "success",
-        },
-        {
-            "tool_name": "tool_generate_learning_plan",
-            "tool_input": {"student_id": uid, "topic": focus_topic},
-            "tool_output_summary": f"已生成 {len(plan_items)} 条 3 天学习任务",
-            "latency_ms": 1,
-            "status": "success",
+            "mode": "offline_fallback",
         },
     ]
 
     evidence = {
-        "tool_calls": [step.get("tool_name") for step in steps_log],
-        "trace_count": len(steps_log),
-        "has_mastery": True,
+        "tool_calls": ["local_rule_fallback"],
+        "trace_count": 1,
+        "has_mastery": mastery_info.get("mastery") is not None,
         "has_graph": bool(graph_context),
-        "has_kb": True,
+        "has_kb": bool(hits),
         "offline_fallback_used": True,
     }
 

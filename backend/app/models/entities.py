@@ -16,7 +16,7 @@ class UserPlan(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String(64), index=True)
-    payload: Mapped[str] = mapped_column(Text)
+    payload: Mapped[str] = mapped_column(LONG_TEXT)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     __table_args__ = (
@@ -29,7 +29,7 @@ class UserKnowledge(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String(64), index=True)
-    payload: Mapped[str] = mapped_column(Text)
+    payload: Mapped[str] = mapped_column(LONG_TEXT)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     __table_args__ = (
@@ -42,7 +42,7 @@ class UserProfile(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String(64), index=True)
-    payload: Mapped[str] = mapped_column(Text)
+    payload: Mapped[str] = mapped_column(LONG_TEXT)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     __table_args__ = (
@@ -69,7 +69,7 @@ class UserEvent(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[str] = mapped_column(String(64), index=True)
     suffix: Mapped[str] = mapped_column(String(32), index=True)
-    payload: Mapped[str] = mapped_column(Text)
+    payload: Mapped[str] = mapped_column(LONG_TEXT)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
 

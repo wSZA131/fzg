@@ -17,7 +17,11 @@
     capabilityCharts: {
       mastery: null,
       diagnosis: null
-    }
+    },
+    contentChart: null,
+    styleRadarChart: null,
+    masteryBarsChart: null,
+    knowledgeGraphChart: null
   };
 
   const styleLabelMap = {
@@ -324,8 +328,8 @@
     setText('graph-edge-count', graphEdgeCount);
     setText('kg-node-count', graphNodeCount);
     setText('kg-edge-count', graphEdgeCount);
-    setText('kg-due-count', toNumber(review.due_count, 0));
-    setText('kg-upcoming-count', toNumber(review.upcoming_count, 0));
+    setText('dash-due-count', toNumber(review.due_count, 0));
+    setText('dash-upcoming-count', toNumber(review.upcoming_count, 0));
 
     const weakCount = toNumber(distribution.weak, 0);
     const mediumCount = toNumber(distribution.medium, 0);
@@ -452,20 +456,15 @@
     const insights = summary && summary.profile_insights ? summary.profile_insights : {};
     const learningStyle = profile.learning_style || '';
     const styleText = insights.learning_style_label || styleLabelMap[learningStyle] || '综合型学习者';
-    const styleMethodText = insights.style_method_label || methodLabelMap[profile.style_method] || (profile.style_method || '--');
     const styleScores = normalizeStylePercent(insights.style_scores || profile.style_scores || {});
     const mediaPreferences = Array.isArray(insights.media_preferences) ? insights.media_preferences : [];
-    const traits = Array.isArray(insights.profile_traits) ? insights.profile_traits : [];
-    const strongestStyle = strongestStyleKey(styleScores);
-    const primaryMedia = mediaPreferences.find(function (item) {
-      return toNumber(item.count, 0) > 0;
-    }) || null;
-    const focusText = profile.focus_minutes ? `${profile.focus_minutes} 分钟` : '--';
+    const totalInteractions = mediaPreferences.reduce(function (sum, item) {
+      return sum + toNumber(item && item.count, 0);
+    }, 0);
     const hasProfileSignal = !!(
       (insights && insights.has_profile_signal)
       || learningStyle
-      || traits.length
-      || primaryMedia
+      || totalInteractions > 0
       || profile.best_time_range
       || profile.focus_minutes
       || styleScores.visual
@@ -474,77 +473,209 @@
     );
 
     setText('dashboard-style', hasProfileSignal ? styleText : '--');
-    setText('dashboard-style-method', `画像推断方式: ${hasProfileSignal ? styleMethodText : '--'}`);
-    setText('dashboard-best-time', `最佳学习时段: ${hasProfileSignal ? (profile.best_time_range || '--') : '--'}`);
-    setText('dashboard-focus', `注意力集中时间: ${hasProfileSignal && profile.focus_minutes ? `${profile.focus_minutes} 分钟` : '--'}`);
+    setText('dashboard-best-time', hasProfileSignal ? (profile.best_time_range || '--') : '--');
+    setText('dashboard-focus', hasProfileSignal && profile.focus_minutes ? `${profile.focus_minutes} 分钟` : '--');
 
-    setText('style-score-visual', `${styleScores.visual}%`);
-    setText('style-score-auditory', `${styleScores.auditory}%`);
-    setText('style-score-kinesthetic', `${styleScores.kinesthetic}%`);
-    const visualBar = document.getElementById('style-bar-visual');
-    const auditoryBar = document.getElementById('style-bar-auditory');
-    const kinestheticBar = document.getElementById('style-bar-kinesthetic');
-    if (visualBar) visualBar.style.width = `${styleScores.visual}%`;
-    if (auditoryBar) auditoryBar.style.width = `${styleScores.auditory}%`;
-    if (kinestheticBar) kinestheticBar.style.width = `${styleScores.kinesthetic}%`;
+    renderStyleRadar(styleScores, profile, totalInteractions);
+    renderContentMixChart(mediaPreferences);
+  }
 
-    setHtml('dashboard-persona-stage', hasProfileSignal
-      ? `
-          <div class="persona-kicker">学习者画像</div>
-          <div class="persona-title">${escapeHtml(styleText)}</div>
-          <div class="persona-desc">
-            ${escapeHtml(
-              primaryMedia
-                ? `当前最适合从“${primaryMedia.label}”切入，再围绕 ${profile.best_time_range || '稳定时段'} 安排学习。`
-                : '当前画像样本仍在积累中，系统会持续根据内容互动和作答行为更新建议。'
-            )}
-          </div>
-          <div class="persona-grid">
-            <div class="persona-metric">
-              <div class="persona-metric-label">主导风格</div>
-              <div class="persona-metric-value">${escapeHtml(styleLabelMap[strongestStyle] || styleText)}</div>
-              <div class="persona-metric-note">由内容偏好与学习行为联合推断</div>
-            </div>
-            <div class="persona-metric">
-              <div class="persona-metric-label">常用输入通道</div>
-              <div class="persona-metric-value">${escapeHtml(primaryMedia ? primaryMedia.label : '--')}</div>
-              <div class="persona-metric-note">${primaryMedia ? `占比 ${toNumber(primaryMedia.percent, 0)}%` : '等待内容交互样本'}</div>
-            </div>
-            <div class="persona-metric">
-              <div class="persona-metric-label">最佳学习时段</div>
-              <div class="persona-metric-value">${escapeHtml(profile.best_time_range || '--')}</div>
-              <div class="persona-metric-note">适合安排难题和理解型任务</div>
-            </div>
-            <div class="persona-metric">
-              <div class="persona-metric-label">建议专注时长</div>
-              <div class="persona-metric-value">${escapeHtml(focusText)}</div>
-              <div class="persona-metric-note">可结合当前学习节奏安排一轮高专注任务</div>
-            </div>
-          </div>
-        `
-      : '<div class="empty-state">当前账号还没有足够的学习画像样本，开始录入内容、练习或诊断后会逐步生成画像。</div>');
+  function renderMasteryBars(heatmap) {
+    const canvas = document.getElementById('dashboard-mastery-bars');
+    const empty = document.getElementById('dashboard-mastery-bars-empty');
+    if (!canvas) return;
 
-    setHtml('dashboard-media-preferences', mediaPreferences.length
-      ? mediaPreferences.map(function (item) {
-          const pct = Math.max(0, Math.min(100, toNumber(item.percent, 0)));
-          return `
-            <div class="mini-item">
-              <div class="mini-item-head">
-                <span class="mini-item-title">${escapeHtml(item.label || '--')}</span>
-                ${createPillMarkup(`${toNumber(item.count, 0)} 次`, false)}
-              </div>
-              <div class="mini-bar"><div class="mini-bar-fill" style="width:${pct}%"></div></div>
-              <div class="mini-item-meta">占当前内容交互 ${pct}%</div>
-            </div>
-          `;
-        }).join('')
-      : '<div class="empty-state">暂无内容交互偏好数据</div>');
+    if (dashboardState.masteryBarsChart && typeof dashboardState.masteryBarsChart.destroy === 'function') {
+      dashboardState.masteryBarsChart.destroy();
+      dashboardState.masteryBarsChart = null;
+    }
 
-    setHtml('dashboard-profile-traits', traits.length
-      ? traits.map(function (item) {
-          return `<div class="intervention-item">${escapeHtml(item)}</div>`;
-        }).join('')
-      : '<div class="empty-state">暂无可解释的画像证据</div>');
+    const items = (Array.isArray(heatmap) ? heatmap : []).map(function (item) {
+      return {
+        concept: String((item && item.concept) || '未命名知识点'),
+        mastery: Math.max(0, Math.min(100, Math.round(toNumber(item && item.mastery, 0))))
+      };
+    }).sort(function (left, right) {
+      return left.mastery - right.mastery;
+    }).slice(0, 5);
+
+    if (!window.Chart || !items.length) {
+      canvas.hidden = true;
+      if (empty) empty.hidden = false;
+      return;
+    }
+
+    canvas.hidden = false;
+    if (empty) empty.hidden = true;
+
+    dashboardState.masteryBarsChart = new window.Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: items.map(function (item) { return item.concept; }),
+        datasets: [{
+          data: items.map(function (item) { return item.mastery; }),
+          backgroundColor: items.map(function (item) {
+            if (item.mastery < 40) return '#ef4444';
+            if (item.mastery < 70) return '#f59e0b';
+            return '#10b981';
+          }),
+          borderRadius: 4,
+          maxBarThickness: 16
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: {
+            beginAtZero: true,
+            max: 100,
+            border: { display: false },
+            ticks: {
+              color: '#8a90a0',
+              font: { size: 9 },
+              callback: function (value) { return `${value}%`; }
+            },
+            grid: { color: '#f1f1f4', drawTicks: false }
+          },
+          y: {
+            border: { display: false },
+            ticks: { color: '#5b6170', font: { size: 9 } },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+  }
+
+  function renderStyleRadar(styleScores, profile, totalInteractions) {
+    const canvas = document.getElementById('dashboard-style-radar');
+    const empty = document.getElementById('dashboard-style-radar-empty');
+    if (!canvas) return;
+
+    if (dashboardState.styleRadarChart && typeof dashboardState.styleRadarChart.destroy === 'function') {
+      dashboardState.styleRadarChart.destroy();
+      dashboardState.styleRadarChart = null;
+    }
+
+    const focusMinutes = toNumber(profile && profile.focus_minutes, 0);
+    const focusScore = focusMinutes > 0 ? Math.min(100, Math.round((focusMinutes / 45) * 100)) : 0;
+    const interactionScore = Math.min(100, Math.round(toNumber(totalInteractions, 0) * 8));
+    const values = [
+      Math.max(0, Math.min(100, Math.round(toNumber(styleScores && styleScores.visual, 0)))),
+      Math.max(0, Math.min(100, Math.round(toNumber(styleScores && styleScores.auditory, 0)))),
+      Math.max(0, Math.min(100, Math.round(toNumber(styleScores && styleScores.kinesthetic, 0)))),
+      focusScore,
+      interactionScore
+    ];
+
+    const hasData = values.some(function (value) { return value > 0; });
+    if (!window.Chart || !hasData) {
+      canvas.hidden = true;
+      if (empty) empty.hidden = false;
+      return;
+    }
+
+    canvas.hidden = false;
+    if (empty) empty.hidden = true;
+
+    dashboardState.styleRadarChart = new window.Chart(canvas, {
+      type: 'radar',
+      data: {
+        labels: ['视觉型', '听觉型', '动觉型', '专注度', '互动活跃度'],
+        datasets: [{
+          data: values,
+          backgroundColor: 'rgba(79, 70, 229, 0.13)',
+          borderColor: '#4f46e5',
+          borderWidth: 1.5,
+          pointBackgroundColor: '#4f46e5',
+          pointBorderColor: '#ffffff',
+          pointRadius: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          r: {
+            min: 0,
+            max: 100,
+            ticks: { display: false, stepSize: 25 },
+            angleLines: { color: '#ececf1' },
+            grid: { color: '#ececf1' },
+            pointLabels: { color: '#5b6170', font: { size: 10 } }
+          }
+        }
+      }
+    });
+  }
+
+  function renderContentMixChart(mediaPreferences) {
+    const canvas = document.getElementById('dashboard-content-chart');
+    const empty = document.getElementById('dashboard-content-chart-empty');
+    const legend = document.getElementById('dashboard-content-legend');
+    const center = document.querySelector('.profile-donut-center');
+    if (!canvas) return;
+
+    if (dashboardState.contentChart && typeof dashboardState.contentChart.destroy === 'function') {
+      dashboardState.contentChart.destroy();
+      dashboardState.contentChart = null;
+    }
+
+    const palette = ['#4f46e5', '#0ea5e9', '#f59e0b', '#10b981', '#a78bfa', '#f43f5e'];
+    const entries = (Array.isArray(mediaPreferences) ? mediaPreferences : []).map(function (item) {
+      return {
+        label: String((item && item.label) || '其他'),
+        count: Math.max(0, toNumber(item && item.count, 0))
+      };
+    }).filter(function (item) {
+      return item.count > 0;
+    });
+
+    const total = entries.reduce(function (sum, item) { return sum + item.count; }, 0);
+    setText('dashboard-content-total', total ? String(total) : '0');
+
+    if (legend) {
+      legend.innerHTML = entries.map(function (item, index) {
+        return `<span><i style="background:${palette[index % palette.length]}"></i>${escapeHtml(item.label)}</span>`;
+      }).join('');
+    }
+
+    if (!window.Chart || !entries.length) {
+      canvas.hidden = true;
+      if (empty) empty.hidden = false;
+      if (center) center.hidden = true;
+      return;
+    }
+
+    canvas.hidden = false;
+    if (empty) empty.hidden = true;
+    if (center) center.hidden = false;
+
+    dashboardState.contentChart = new window.Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels: entries.map(function (item) { return item.label; }),
+        datasets: [{
+          data: entries.map(function (item) { return item.count; }),
+          backgroundColor: entries.map(function (item, index) { return palette[index % palette.length]; }),
+          borderColor: '#ffffff',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        cutout: '66%',
+        plugins: { legend: { display: false } }
+      }
+    });
   }
 
   function renderDiagnosis(summary) {
@@ -789,7 +920,7 @@
   }
 
   function destroyCapabilityCharts() {
-    ['mastery', 'diagnosis'].forEach(function (key) {
+    ['mastery', 'diagnosis', 'closure', 'review'].forEach(function (key) {
       const chart = dashboardState.capabilityCharts[key];
       if (chart && typeof chart.destroy === 'function') {
         chart.destroy();
@@ -828,21 +959,24 @@
       }
     }
 
+    renderMasteryBars(heatmap);
+
     const learningProgressEl = document.getElementById('dashboard-learning-progress');
+    const overallMastery = Math.round(toNumber(summary && summary.overall_mastery, 0) * 100);
+    const graphNodeCount = toNumber((graphInsights.graph_size || {}).nodes, 0);
+    const diagnosisTotal = toNumber(diagnosis.total, 0);
+    const reviewDue = toNumber(review.due_count, 0);
+    const reviewUpcoming = toNumber(review.upcoming_count, 0);
+    const sourceTotal = toNumber(dataPool.total_records, 0) + toNumber(dataPool.space_content_count, 0);
+
+    const progressItems = [
+      { label: '知识掌握度', value: overallMastery },
+      { label: '知识图谱覆盖度', value: Math.max(0, Math.min(100, graphNodeCount * 4)) },
+      { label: '诊断样本完备度', value: Math.max(0, Math.min(100, diagnosisTotal * 12)) },
+      { label: '学习闭环准备度', value: Math.max(0, Math.min(100, recommendations.length * 15 + (reviewDue > 0 ? 25 : 40) + Math.min(20, sourceTotal))) }
+    ];
+
     if (learningProgressEl) {
-      const overallMastery = Math.round(toNumber(summary && summary.overall_mastery, 0) * 100);
-      const graphNodeCount = toNumber((graphInsights.graph_size || {}).nodes, 0);
-      const diagnosisTotal = toNumber(diagnosis.total, 0);
-      const reviewDue = toNumber(review.due_count, 0);
-      const sourceTotal = toNumber(dataPool.total_records, 0) + toNumber(dataPool.space_content_count, 0);
-
-      const progressItems = [
-        { label: '知识掌握度', value: overallMastery },
-        { label: '知识图谱覆盖度', value: Math.max(0, Math.min(100, graphNodeCount * 4)) },
-        { label: '诊断样本完备度', value: Math.max(0, Math.min(100, diagnosisTotal * 12)) },
-        { label: '学习闭环准备度', value: Math.max(0, Math.min(100, recommendations.length * 15 + (reviewDue > 0 ? 25 : 40) + Math.min(20, sourceTotal))) }
-      ];
-
       learningProgressEl.innerHTML = progressItems.map(function (item) {
         const val = Math.max(0, Math.min(100, Math.round(toNumber(item.value, 0))));
         return `
@@ -890,6 +1024,10 @@
       return;
     }
 
+    const chartGridColor = '#ececf1';
+    const chartTickColor = '#8a90a0';
+    const chartFont = { size: 9 };
+
     const masteryData = [
       toNumber(distribution.weak, 0),
       toNumber(distribution.medium, 0),
@@ -902,18 +1040,21 @@
         labels: ['薄弱', '过渡', '稳定'],
         datasets: [{
           data: masteryData,
-          backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
+          backgroundColor: ['#f43f5e', '#f59e0b', '#10b981'],
           borderColor: '#ffffff',
-          borderWidth: 2
+          borderWidth: 3,
+          hoverOffset: 2
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: false,
+        cutout: '62%',
         plugins: {
           legend: {
             position: 'bottom',
-            labels: { boxWidth: 12, color: '#4c647f', font: { size: 11 } }
+            labels: { boxWidth: 8, boxHeight: 8, color: chartTickColor, font: chartFont, padding: 10 }
           }
         }
       }
@@ -931,25 +1072,103 @@
         labels: ['知识性', '技能性', '习惯性'],
         datasets: [{
           data: diagnosisData,
-          backgroundColor: ['#f87171', '#fbbf24', '#34d399'],
+          backgroundColor: ['#f43f5e', '#f59e0b', '#10b981'],
           borderRadius: 6,
-          maxBarThickness: 34
+          maxBarThickness: 30
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { grid: { display: false }, ticks: { color: '#4c647f', font: { size: 11 } } },
+          x: {
+            grid: { display: false, color: chartGridColor },
+            border: { color: chartGridColor },
+            ticks: { color: chartTickColor, font: chartFont }
+          },
           y: {
             beginAtZero: true,
-            ticks: { color: '#4c647f', precision: 0, font: { size: 11 } },
-            grid: { color: '#eef3f8' }
+            border: { display: false },
+            ticks: { color: chartTickColor, precision: 0, font: chartFont },
+            grid: { color: chartGridColor, drawTicks: false }
           }
         }
       }
     });
+
+    const closureCanvas = document.getElementById('dashboard-closure-chart');
+    if (closureCanvas) {
+      dashboardState.capabilityCharts.closure = new window.Chart(closureCanvas, {
+        type: 'radar',
+        data: {
+          labels: ['掌握度', '图谱覆盖', '诊断完备', '闭环准备'],
+          datasets: [{
+            data: progressItems.map(function (item) {
+              return Math.max(0, Math.min(100, Math.round(toNumber(item.value, 0))));
+            }),
+            backgroundColor: 'rgba(79, 70, 229, 0.12)',
+            borderColor: '#4f46e5',
+            borderWidth: 1.5,
+            pointBackgroundColor: '#4f46e5',
+            pointBorderColor: '#ffffff',
+            pointRadius: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            r: {
+              min: 0,
+              max: 100,
+              angleLines: { color: chartGridColor },
+              grid: { color: chartGridColor },
+              pointLabels: { color: chartTickColor, font: chartFont },
+              ticks: { display: false, stepSize: 25 }
+            }
+          }
+        }
+      });
+    }
+
+    const reviewCanvas = document.getElementById('dashboard-review-chart');
+    if (reviewCanvas) {
+      dashboardState.capabilityCharts.review = new window.Chart(reviewCanvas, {
+        type: 'bar',
+        data: {
+          labels: ['到期复习', '待规划', '知识点'],
+          datasets: [{
+            data: [reviewDue, reviewUpcoming, graphNodeCount],
+            backgroundColor: ['#f59e0b', '#0ea5e9', '#8b5cf6'],
+            borderRadius: 6,
+            maxBarThickness: 30
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              grid: { display: false, color: chartGridColor },
+              border: { color: chartGridColor },
+              ticks: { color: chartTickColor, font: chartFont }
+            },
+            y: {
+              beginAtZero: true,
+              border: { display: false },
+              ticks: { color: chartTickColor, precision: 0, font: chartFont },
+              grid: { color: chartGridColor, drawTicks: false }
+            }
+          }
+        }
+      });
+    }
   }
 
   function renderReviewReminders(summary) {
@@ -992,6 +1211,10 @@
     renderRecommendations(dashboardState.summary);
     renderReviewReminders(dashboardState.summary);
     renderCapabilityAlignment(dashboardState.summary);
+
+    const now = new Date();
+    const timeLabel = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    setText('dashboard-last-updated', timeLabel);
   }
 
   function renderSummaryLoadError(message) {
@@ -1022,7 +1245,180 @@
     setHtml('dashboard-learning-progress', emptyMarkup);
     setHtml('dashboard-learning-path-timeline', emptyMarkup);
     destroyCapabilityCharts();
+
+    ['contentChart', 'styleRadarChart', 'masteryBarsChart'].forEach(function (key) {
+      const chart = dashboardState[key];
+      if (chart && typeof chart.destroy === 'function') {
+        chart.destroy();
+      }
+      dashboardState[key] = null;
+    });
+
+    const contentCanvas = document.getElementById('dashboard-content-chart');
+    const contentEmpty = document.getElementById('dashboard-content-chart-empty');
+    const contentLegend = document.getElementById('dashboard-content-legend');
+    const contentCenter = document.querySelector('.profile-donut-center');
+    if (contentCanvas) contentCanvas.hidden = true;
+    if (contentEmpty) contentEmpty.hidden = false;
+    if (contentLegend) contentLegend.innerHTML = '';
+    if (contentCenter) contentCenter.hidden = true;
+
+    const radarCanvas = document.getElementById('dashboard-style-radar');
+    const radarEmpty = document.getElementById('dashboard-style-radar-empty');
+    if (radarCanvas) radarCanvas.hidden = true;
+    if (radarEmpty) radarEmpty.hidden = false;
+
+    const masteryCanvas = document.getElementById('dashboard-mastery-bars');
+    const masteryEmpty = document.getElementById('dashboard-mastery-bars-empty');
+    if (masteryCanvas) masteryCanvas.hidden = true;
+    if (masteryEmpty) masteryEmpty.hidden = false;
+
     syncHeatmapEditMode();
+  }
+
+  function getDashboardGraphNodeColor(node) {
+    if (String((node && node.node_type) || 'concept') === 'document') return '#6366f1';
+    const mastery = toNumber(node && node.mastery, 0);
+    if (mastery >= 0.8) return '#10b981';
+    if (mastery >= 0.6) return '#34d399';
+    if (mastery >= 0.4) return '#f59e0b';
+    return '#ef4444';
+  }
+
+  function resetDashboardKnowledgeGraph(message) {
+    const container = document.getElementById('dashboard-knowledge-graph');
+    if (!container) return;
+
+    if (dashboardState.knowledgeGraphChart) {
+      dashboardState.knowledgeGraphChart.dispose();
+      dashboardState.knowledgeGraphChart = null;
+    }
+
+    container.innerHTML = `<div class="empty-state">${escapeHtml(message)}</div>`;
+  }
+
+  async function loadDashboardKnowledgeGraph() {
+    const container = document.getElementById('dashboard-knowledge-graph');
+    if (!container) return;
+
+    if (typeof window.echarts === 'undefined') {
+      resetDashboardKnowledgeGraph('图谱组件加载失败，请检查网络后刷新。');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/knowledge_graph?user_id=${encodeURIComponent(getUserId())}&min_relation_score=0.45&include_documents=true`, {
+        cache: 'no-store'
+      });
+      const data = await parseApiResponse(response);
+      const graph = data && typeof data.graph === 'object' ? data.graph : {};
+      const nodes = Array.isArray(graph.nodes) ? graph.nodes : [];
+      const links = Array.isArray(graph.links) ? graph.links : [];
+
+      if (!nodes.length) {
+        resetDashboardKnowledgeGraph('暂无图谱数据，录入学习内容后会自动生成。');
+        return;
+      }
+
+      if (!dashboardState.knowledgeGraphChart) {
+        container.innerHTML = '';
+        dashboardState.knowledgeGraphChart = window.echarts.init(container);
+        window.addEventListener('resize', function () {
+          if (dashboardState.knowledgeGraphChart) {
+            dashboardState.knowledgeGraphChart.resize();
+          }
+        });
+      }
+
+      const option = {
+        tooltip: {
+          trigger: 'item',
+          formatter: function (params) {
+            if (params.dataType === 'node') {
+              const node = params.data || {};
+              const isDocument = String(node.node_type || 'concept') === 'document';
+              return [
+                `<strong>${escapeHtml(node.name || '未命名节点')}</strong>`,
+                isDocument ? '文档节点' : `掌握度 ${Math.round(toNumber(node.mastery, 0) * 100)}%`,
+                isDocument
+                  ? `关联概念 ${toNumber(node.mention_count, 0)} 个`
+                  : `难度 ${Math.round(toNumber(node.difficulty, 0) * 100)}%`
+              ].join('<br>');
+            }
+            const edge = params.data || {};
+            return `${escapeHtml(edge.source_label || edge.source || '')} → ${escapeHtml(edge.target_label || edge.target || '')}`;
+          }
+        },
+        series: [{
+          type: 'graph',
+          layout: 'force',
+          roam: true,
+          draggable: true,
+          animationDuration: 400,
+          force: {
+            repulsion: 320,
+            edgeLength: [70, 150],
+            gravity: 0.1
+          },
+          label: {
+            show: true,
+            position: 'right',
+            color: '#5b6170',
+            fontSize: 10
+          },
+          edgeSymbol: ['none', 'arrow'],
+          edgeSymbolSize: 6,
+          lineStyle: {
+            color: '#c8cdd8',
+            opacity: 0.85,
+            width: 1.2,
+            curveness: 0.08
+          },
+          emphasis: {
+            focus: 'adjacency',
+            lineStyle: { width: 2 }
+          },
+          data: nodes.map(function (node) {
+            const isDocument = String(node.node_type || 'concept') === 'document';
+            return {
+              ...node,
+              symbol: isDocument ? 'roundRect' : 'circle',
+              symbolSize: isDocument ? 30 : (18 + Math.round(toNumber(node.mastery, 0) * 22)),
+              itemStyle: {
+                color: getDashboardGraphNodeColor(node),
+                borderColor: '#ffffff',
+                borderWidth: 2
+              }
+            };
+          }),
+          links: links.map(function (link) {
+            const mentionEdge = String(link.edge_type || '').toLowerCase() === 'mention'
+              || String(link.label || '').toUpperCase() === 'MENTIONS';
+            return {
+              ...link,
+              lineStyle: mentionEdge
+                ? {
+                    color: '#a5b4fc',
+                    opacity: 0.9,
+                    width: 1.4,
+                    type: 'dashed',
+                    curveness: 0.1
+                  }
+                : {
+                    color: '#c8cdd8',
+                    opacity: 0.85,
+                    width: 1.2,
+                    curveness: 0.08
+                  }
+            };
+          })
+        }]
+      };
+
+      dashboardState.knowledgeGraphChart.setOption(option, true);
+    } catch (error) {
+      resetDashboardKnowledgeGraph(withSuggestion('图谱加载失败', error, '稍后重试'));
+    }
   }
 
   async function loadDashboardSummary() {
@@ -1193,12 +1589,10 @@
 
   function closeDashboardDrawer() {
     const drawer = document.getElementById('dashboardDrawer');
-    const backdrop = document.getElementById('dashboardDrawerBackdrop');
-    if (!drawer || !backdrop) return;
+    if (!drawer) return;
 
     drawer.classList.remove('open');
     drawer.setAttribute('aria-hidden', 'true');
-    backdrop.classList.remove('show');
     document.body.classList.remove('dashboard-drawer-open');
     dashboardState.activeDrawerPanel = '';
     syncDrawerTriggerState('');
@@ -1206,21 +1600,18 @@
 
   function openDashboardDrawer(panelKey) {
     const drawer = document.getElementById('dashboardDrawer');
-    const backdrop = document.getElementById('dashboardDrawerBackdrop');
-    if (!drawer || !backdrop) return;
+    if (!drawer) return;
     if (!setActiveDrawerPanel(panelKey)) return;
 
     drawer.classList.add('open');
     drawer.setAttribute('aria-hidden', 'false');
-    backdrop.classList.add('show');
     document.body.classList.add('dashboard-drawer-open');
   }
 
   function initDashboardDrawer() {
     const drawer = document.getElementById('dashboardDrawer');
-    const backdrop = document.getElementById('dashboardDrawerBackdrop');
     const closeButton = document.getElementById('dashboardDrawerClose');
-    if (!drawer || !backdrop || !closeButton) return;
+    if (!drawer || !closeButton) return;
 
     document.querySelectorAll('.hero-drawer-launcher[data-drawer-target]').forEach(function (trigger) {
       trigger.addEventListener('click', function () {
@@ -1237,7 +1628,6 @@
     });
 
     closeButton.addEventListener('click', closeDashboardDrawer);
-    backdrop.addEventListener('click', closeDashboardDrawer);
     syncDrawerTriggerState('');
 
     document.addEventListener('keydown', function (event) {
@@ -1259,8 +1649,26 @@
     syncDashboardUserLabel();
     loadDashboardTodayTasks();
     loadDashboardSummary();
+    loadDashboardKnowledgeGraph();
     startDashboardAutoRefresh();
     syncHeatmapEditMode();
+
+    const refreshButton = document.getElementById('dashboardRefreshBtn');
+    if (refreshButton && !refreshButton.dataset.bound) {
+      refreshButton.addEventListener('click', async function () {
+        if (refreshButton.disabled) return;
+        const originalLabel = refreshButton.textContent;
+        refreshButton.disabled = true;
+        refreshButton.textContent = '刷新中…';
+        try {
+          await Promise.all([loadDashboardSummary(), loadDashboardKnowledgeGraph()]);
+        } finally {
+          refreshButton.disabled = false;
+          refreshButton.textContent = originalLabel;
+        }
+      });
+      refreshButton.dataset.bound = '1';
+    }
 
     const recFilter = document.getElementById('dashboard-rec-style-filter');
     if (recFilter) {
@@ -1283,12 +1691,14 @@
     window.addEventListener('knowledge:updated', function () {
       loadDashboardTodayTasks();
       loadDashboardSummary();
+      loadDashboardKnowledgeGraph();
     });
 
     window.addEventListener('storage', function (event) {
       if (!event || event.key !== KNOWLEDGE_UPDATED_AT_STORAGE_KEY) return;
       loadDashboardTodayTasks();
       loadDashboardSummary();
+      loadDashboardKnowledgeGraph();
     });
 
     window.addEventListener('focus', function () {
@@ -1314,6 +1724,7 @@
         syncDashboardUserLabel();
         loadDashboardTodayTasks();
         loadDashboardSummary();
+        loadDashboardKnowledgeGraph();
       });
     }
   });

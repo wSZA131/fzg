@@ -1,11 +1,17 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+    <link rel="icon" type="image/svg+xml" href="assets/images/app-icon.svg">
     <meta charset="UTF-8">
     <title>学习仪表盘 - 智能学习伴侣</title>
     <link rel="stylesheet" href="assets/css/shared/auth-ui.css?v=20260512-auth-modal-scrollbarhide-v3">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --dashboard-drawer-width: min(420px, 100vw);
+        }
+
         body {
             font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
             background:
@@ -13,6 +19,7 @@
                 radial-gradient(circle at top right, rgba(15, 118, 110, 0.10), transparent 20%),
                 #f4f7fb;
             color: #10243e;
+            transition: padding-right 0.24s cubic-bezier(0.2, 0.7, 0.2, 1);
         }
 
         .global-sidebar-toggle {
@@ -370,111 +377,127 @@
             margin-top: 22px;
         }
 
-        .dashboard-drawer-backdrop {
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.36);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.22s ease;
-            z-index: 1410;
-        }
-
-        .dashboard-drawer-backdrop.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
         .dashboard-drawer {
             position: fixed;
             top: 0;
             right: 0;
-            height: 100vh;
-            width: min(560px, calc(100vw - 18px));
-            padding: 16px 0 16px 16px;
-            transform: translateX(100%);
-            transition: transform 0.24s ease;
+            bottom: 0;
+            width: var(--dashboard-drawer-width);
+            background: #ffffff;
+            border-left: 1px solid #ececf1;
+            transform: translateX(101%);
+            visibility: hidden;
+            transition:
+                transform 0.24s cubic-bezier(0.2, 0.7, 0.2, 1),
+                visibility 0s linear 0.24s;
             z-index: 1420;
-            pointer-events: none;
         }
 
         .dashboard-drawer.open {
             transform: translateX(0);
-            pointer-events: auto;
+            visibility: visible;
+            transition:
+                transform 0.24s cubic-bezier(0.2, 0.7, 0.2, 1),
+                visibility 0s linear 0s;
         }
 
         .dashboard-drawer-shell {
             height: 100%;
             display: flex;
             flex-direction: column;
-            background: rgba(255, 255, 255, 0.98);
-            border: 1px solid #d8e4f3;
-            border-right: none;
-            border-radius: 28px 0 0 28px;
-            box-shadow: -24px 0 60px rgba(15, 23, 42, 0.20);
+            background: #ffffff;
             overflow: hidden;
         }
 
         .dashboard-drawer-header {
             display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 14px;
-            padding: 22px 22px 18px;
-            border-bottom: 1px solid #e2ebf5;
-            background:
-                linear-gradient(135deg, rgba(233, 243, 255, 0.9), rgba(241, 247, 255, 0.96)),
-                #f7fbff;
+            flex: 0 0 54px;
+            align-items: center;
+            gap: 6px;
+            height: 54px;
+            padding: 0 8px;
+            border-bottom: 1px solid #ececf1;
+            background: #ffffff;
+        }
+
+        .dashboard-drawer-header > div {
+            display: flex;
+            flex: 1;
+            align-items: center;
+            gap: 4px;
+            min-width: 0;
         }
 
         .dashboard-drawer-kicker {
-            display: inline-flex;
-            align-items: center;
-            padding: 6px 12px;
-            border-radius: 999px;
-            background: #ecf3ff;
-            border: 1px solid #d9e6f8;
-            color: #2d4ebd;
-            font-size: 12px;
-            font-weight: 800;
+            display: none;
         }
 
         .dashboard-drawer-title {
-            margin-top: 14px;
-            font-size: 28px;
-            line-height: 1.35;
-            color: #123458;
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            max-width: 100%;
+            height: 30px;
+            padding: 0 10px 0 26px;
+            overflow: hidden;
+            border-radius: 7px;
+            background: #f3f4f6;
+            color: #14161b;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .dashboard-drawer-title::before {
+            content: "";
+            position: absolute;
+            left: 11px;
+            top: 50%;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.12);
+            transform: translateY(-50%);
         }
 
         .dashboard-drawer-desc {
-            margin-top: 10px;
-            color: #607186;
-            font-size: 14px;
-            line-height: 1.8;
-            max-width: 380px;
+            display: none;
         }
 
         .dashboard-drawer-close {
-            border: 1px solid #d9e6f7;
-            background: #ffffff;
-            color: #24425f;
-            border-radius: 999px;
-            padding: 10px 14px;
-            font-size: 13px;
-            font-weight: 800;
+            order: -1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 28px;
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            border: 0;
+            border-radius: 7px;
+            background: transparent;
+            color: #8a90a0;
+            font-family: inherit;
+            font-size: 18px;
+            font-weight: 400;
+            line-height: 1;
             cursor: pointer;
-            flex-shrink: 0;
         }
 
         .dashboard-drawer-close:hover {
-            background: #f7fbff;
+            background: #f1f2f4;
+            color: #14161b;
         }
 
         .dashboard-drawer-body {
             flex: 1;
             min-height: 0;
             overflow-y: auto;
-            padding: 22px;
+            padding: 16px 14px 22px;
+            background: #ffffff;
         }
 
         .dashboard-drawer-panel[hidden] {
@@ -494,6 +517,7 @@
         }
 
         .dashboard-drawer-open {
+            padding-right: var(--dashboard-drawer-width);
             overflow: hidden;
         }
 
@@ -1725,6 +1749,10 @@
         }
 
         @media (max-width: 900px) {
+            :root {
+                --dashboard-drawer-width: min(380px, 100vw);
+            }
+
             .profile-summary,
             .metric-row,
             .diagnosis-grid,
@@ -1747,21 +1775,24 @@
                 grid-template-columns: 1fr;
             }
 
-            .dashboard-drawer {
-                width: 100vw;
-                padding-left: 0;
-            }
-
-            .dashboard-drawer-shell {
-                border-radius: 24px 0 0 24px;
-            }
-
             .capability-heatmap {
                 grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
             }
         }
 
         @media (max-width: 720px) {
+            :root {
+                --dashboard-drawer-width: 100vw;
+            }
+
+            body.dashboard-drawer-open {
+                padding-right: 0;
+            }
+
+            .dashboard-drawer {
+                border-left: 0;
+            }
+
             .dashboard-container {
                 padding: 70px 14px 30px;
             }
@@ -1784,14 +1815,18 @@
                 grid-template-columns: 1fr;
             }
 
-            .dashboard-drawer-header,
+            .dashboard-drawer-header {
+                padding-left: 8px;
+                padding-right: 8px;
+            }
+
             .dashboard-drawer-body {
                 padding-left: 16px;
                 padding-right: 16px;
             }
 
             .dashboard-drawer-title {
-                font-size: 24px;
+                font-size: 12px;
             }
 
             .capability-panel {
@@ -1799,67 +1834,61 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="assets/css/shared/site-theme.css?v=20261114-docked-panel-v1">
+    <link rel="stylesheet" href="assets/css/pages/dashboard-board.css?v=20261113-profile-radar-v1">
 </head>
-<body>
+<body class="dashboard-page">
     <button class="global-sidebar-toggle" id="globalSidebarToggle" type="button" aria-label="打开侧栏">☰</button>
     <div class="global-sidebar-backdrop" id="globalSidebarBackdrop"></div>
     <aside class="global-sidebar" id="globalSidebar">
         <div class="global-sidebar-scroll">
             <div class="global-sidebar-logo">坊知工</div>
-            <a class="global-sidebar-link" data-side-link="index.html" href="index.html">+ 添加内容</a>
-            <a class="global-sidebar-link" data-side-link="chat.html" href="chat.html">◎ 智能问答</a>
-            <a class="global-sidebar-link" data-side-link="question-bank.html" href="question-bank.html">◎ 题库练习</a>
-            <a class="global-sidebar-link" data-side-link="dashboard.html" href="dashboard.html">◧ 学习仪表盘</a>
-            <a class="global-sidebar-link" data-side-link="knowledge-map.html" href="knowledge-map.html">◇ 知识图谱</a>
+            <a class="global-sidebar-link" data-side-link="index.html" href="index.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span class="st-nav-label">添加内容</span></a>
+            <a class="global-sidebar-link" data-side-link="chat.html" href="chat.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H8l-5 3 1.2-5.1A8.5 8.5 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5Z"/></svg></span><span class="st-nav-label">智能问答</span></a>
+            <a class="global-sidebar-link" data-side-link="question-bank.html" href="question-bank.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12.3l2.6 2.6L16 9.3"/></svg></span><span class="st-nav-label">题库练习</span></a>
+            <a class="global-sidebar-link" data-side-link="dashboard.html" href="dashboard.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></svg></span><span class="st-nav-label">学习仪表盘</span></a>
             <div class="global-sidebar-section">空间</div>
-            <a class="global-sidebar-link" data-side-link="spaces.html" href="spaces.html">◻ 我的空间</a>
+            <a class="global-sidebar-link" data-side-link="spaces.html" href="spaces.html"><span class="st-nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.5 7.5a2 2 0 0 1 2-2h3.9l2.1 2.6h6.9a2 2 0 0 1 2 2v7.4a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z"/></svg></span><span class="st-nav-label">我的空间</span></a>
         </div>
     </aside>
 
     <div class="dashboard-container">
-        <div class="dashboard-header">
-            <div>
-                <h1 class="dashboard-title">学习仪表盘</h1>
-                <p class="dashboard-subtitle">围绕多源学习数据、动态知识图谱、学习者画像与认知诊断构建全过程学习闭环，持续跟踪理解、评估、推理与个性化干预效果。</p>
+        <header class="dash-header">
+            <div class="dash-header-main">
+                <h1 class="dash-title">学习仪表盘</h1>
+                <p class="dash-subtitle">多源学习数据 · 知识图谱 · 认知诊断的实时汇总</p>
             </div>
-            <div class="dashboard-actions">
-                <span id="dashboard-user-label" style="color:#6b7280; font-size:14px;"></span>
-                <a href="knowledge-map.html" class="back-link">知识图谱</a>
-                <a href="index.html" class="back-link">返回主界面</a>
+            <div class="dash-header-actions">
+                <span class="dash-chip" id="dashboard-user-label">当前用户：访客</span>
+                <span class="dash-chip">自动刷新 <b>15s</b></span>
+                <a class="dash-chip dash-chip-link" href="index.html">返回主界面</a>
+                <button class="dash-refresh" id="dashboardRefreshBtn" type="button">↻ 刷新数据</button>
+            </div>
+        </header>
+
+        <div class="dash-toolbar">
+            <div class="dash-toolbar-group">
+                <span class="dash-toolbar-label">数据视图</span>
+                <span class="dash-view-pill">学习总览 · 实时</span>
+                <span class="dash-toolbar-note">dashboard/summary · 最近同步 <b id="dashboard-last-updated">--</b></span>
+            </div>
+            <div class="dash-toolbar-group" role="group" aria-label="按需查看模块">
+                <button class="hero-drawer-launcher dash-launcher" type="button" data-drawer-target="data" aria-controls="dashboardDrawer">
+                    <span class="dash-launcher-index">01</span>多源学习数据
+                </button>
+                <button class="hero-drawer-launcher dash-launcher" type="button" data-drawer-target="diagnosis" aria-controls="dashboardDrawer">
+                    <span class="dash-launcher-index">02</span>认知诊断与干预
+                </button>
+                <button class="hero-drawer-launcher dash-launcher" type="button" data-drawer-target="plan" aria-controls="dashboardDrawer">
+                    <span class="dash-launcher-index">03</span>学习计划与复习
+                </button>
             </div>
         </div>
 
-        <section class="dashboard-hero">
-            <div class="hero-top-row">
-                <div class="hero-copy">
-                    
-                    <span class="hero-kicker">知识融合智能学伴</span>
-                    <h2>让学习有迹可循，让成长清晰可见</h2>
-                    <p>系统基于截图识别、学习内容录入、题目作答与错题归因，持续更新学生中心知识网络，生成学习画像、认知判断与个性化补救建议。</p>
-                </div>
-                <div class="hero-drawer-launchers" role="group" aria-label="按需查看模块">
-                    <button class="hero-drawer-launcher" type="button" data-drawer-target="data" aria-controls="dashboardDrawer">
-                        <span class="hero-drawer-launcher-label">按需查看 01</span>
-                        <span class="hero-drawer-launcher-body">
-                            <span class="hero-drawer-launcher-title">多源学习数据</span>
-                            <span class="hero-drawer-launcher-arrow" aria-hidden="true">›</span>
-                        </span>
-                    </button>
-                    <button class="hero-drawer-launcher" type="button" data-drawer-target="diagnosis" aria-controls="dashboardDrawer">
-                        <span class="hero-drawer-launcher-label">按需查看 02</span>
-                        <span class="hero-drawer-launcher-body">
-                            <span class="hero-drawer-launcher-title">认知诊断与个性化干预政策</span>
-                            <span class="hero-drawer-launcher-arrow" aria-hidden="true">›</span>
-                        </span>
-                    </button>
-                    <button class="hero-drawer-launcher" type="button" data-drawer-target="plan" aria-controls="dashboardDrawer">
-                        <span class="hero-drawer-launcher-label">按需查看 03</span>
-                        <span class="hero-drawer-launcher-body">
-                            <span class="hero-drawer-launcher-title">个性化学习计划与复习编排</span>
-                            <span class="hero-drawer-launcher-arrow" aria-hidden="true">›</span>
-                        </span>
-                    </button>
-                </div>
+        <section class="dashboard-hero dash-summary">
+            <div class="dash-panel-head">
+                <span class="dash-panel-title">学习总览 · 实时</span>
+                <span class="dash-panel-meta">掌握度 / 数据 / 图谱 / 干预 / 复习</span>
             </div>
             <div class="hero-metrics">
                 <div class="hero-metric">
@@ -1870,146 +1899,127 @@
                 <div class="hero-metric">
                     <div class="hero-metric-label">已接入多源学习记录</div>
                     <div id="data-source-total" class="hero-metric-value">0</div>
-                    <div class="hero-metric-note">截图、链接、笔记、作答等统一进入数据池</div>
+                    <div class="hero-metric-note">截图、链接、笔记、作答统一进入数据池</div>
                 </div>
                 <div class="hero-metric">
-                    <div class="hero-metric-label">学生知识图谱节点 / 关系</div>
+                    <div class="hero-metric-label">知识图谱节点 / 关系</div>
                     <div class="hero-metric-value"><span id="graph-node-count">0</span> / <span id="graph-edge-count">0</span></div>
                     <div class="hero-metric-note">支持掌握热力图与依赖链追溯</div>
                 </div>
                 <div class="hero-metric">
                     <div class="hero-metric-label">待执行个性化干预</div>
                     <div id="dashboard-active-interventions" class="hero-metric-value">0</div>
-                    <div class="hero-metric-note">推荐资源与到期复习会联动生成行动建议</div>
+                    <div class="hero-metric-note">推荐资源与到期复习联动生成行动建议</div>
                 </div>
-            </div>
-            <div class="hero-pills">
-                <span class="hero-pill">截图 / OCR识别</span>
-                <span class="hero-pill">知识图谱动态更新</span>
-                <span class="hero-pill">KMeans学习画像</span>
-                <span class="hero-pill">错题语义归因</span>
-                <span class="hero-pill">遗忘曲线复习提醒</span>
+                <div class="hero-metric">
+                    <div class="hero-metric-label">今日到期复习</div>
+                    <div id="dash-due-count" class="hero-metric-value">0</div>
+                    <div class="hero-metric-note">优先推送薄弱且到期的知识点</div>
+                </div>
+                <div class="hero-metric">
+                    <div class="hero-metric-label">后续待规划复习</div>
+                    <div id="dash-upcoming-count" class="hero-metric-value">0</div>
+                    <div class="hero-metric-note">面向长期记忆的节奏化安排</div>
+                </div>
             </div>
         </section>
 
-        <div class="dashboard-focus-grid">
-            <section class="card card-focus">
-                <div class="card-focus-head">
-                    <span class="card-kicker">核心模块 01</span>
-                    <span class="card-focus-badge">主展示</span>
+        <section class="dash-chart-grid" aria-label="学习数据分析">
+            <article class="dash-chart-card">
+                <div class="dash-chart-head">
+                    <span class="dash-chart-title">掌握度分层 · 知识点</span>
+                    <span class="dash-chart-meta">薄弱 / 过渡 / 稳定</span>
                 </div>
-                <h2 class="card-title">动态知识图谱与认知判断</h2>
-                <p class="card-desc">以学生为中心组织知识点来源、依赖关系与掌握水平，并结合遗忘曲线动态规划复习节点，支持知识掌握热力图和依赖链追溯。</p>
-                <div class="metric-row">
-                    <div class="metric-tile">
-                        <div class="metric-tile-label">掌握度热力评分</div>
-                        <div id="kg-overall-mastery" class="metric-tile-value">--</div>
-                        <div class="metric-tile-note">根据已记录知识点掌握度实时更新</div>
-                    </div>
-                    <div class="metric-tile">
-                        <div class="metric-tile-label">知识点 / 关系数量</div>
-                        <div class="metric-tile-value"><span id="kg-node-count">0</span> / <span id="kg-edge-count">0</span></div>
-                        <div class="metric-tile-note">跟踪概念间的前置与相关关系</div>
-                    </div>
-                    <div class="metric-tile">
-                        <div class="metric-tile-label">今日到期复习节点</div>
-                        <div id="kg-due-count" class="metric-tile-value">0</div>
-                        <div class="metric-tile-note">优先推送薄弱且到期的知识点</div>
-                    </div>
-                    <div class="metric-tile">
-                        <div class="metric-tile-label">后续待规划复习</div>
-                        <div id="kg-upcoming-count" class="metric-tile-value">0</div>
-                        <div class="metric-tile-note">面向长期记忆的节奏化安排</div>
-                    </div>
+                <div class="dash-chart-body"><canvas id="dashboard-mastery-chart"></canvas></div>
+            </article>
+            <article class="dash-chart-card">
+                <div class="dash-chart-head">
+                    <span class="dash-chart-title">诊断类别 · 错误结构</span>
+                    <span class="dash-chart-meta">知识 / 技能 / 习惯</span>
                 </div>
-                <div class="insight-duo">
-                    <div class="insight-panel">
-                        <div class="insight-panel-title">掌握分层概览</div>
-                        <div class="insight-panel-note">用颜色和数量快速定位薄弱区、过渡区和稳定掌握区。</div>
-                        <div id="dashboard-mastery-spectrum" class="empty-state">加载中...</div>
-                        <div id="dashboard-mastery-story" class="mastery-story">加载中...</div>
-                    </div>
-                    <div class="insight-panel">
-                        <div class="insight-panel-title">复习压力预警</div>
-                        <div class="insight-panel-note">把今天需要处理的复习量、后续待安排量和薄弱点放到一眼就能看到的位置。</div>
-                        <div id="dashboard-review-forecast" class="forecast-grid">
-                            <div class="empty-state">加载中...</div>
-                        </div>
+                <div class="dash-chart-body"><canvas id="dashboard-diagnosis-chart"></canvas></div>
+            </article>
+            <article class="dash-chart-card">
+                <div class="dash-chart-head">
+                    <span class="dash-chart-title">学习闭环能力</span>
+                    <span class="dash-chart-meta">四项能力评分</span>
+                </div>
+                <div class="dash-chart-body"><canvas id="dashboard-closure-chart"></canvas></div>
+            </article>
+            <article class="dash-chart-card">
+                <div class="dash-chart-head">
+                    <span class="dash-chart-title">复习压力 · 到期 / 后续</span>
+                    <span class="dash-chart-meta">遗忘曲线</span>
+                </div>
+                <div class="dash-chart-body"><canvas id="dashboard-review-chart"></canvas></div>
+            </article>
+        </section>
+
+        <div class="dashboard-analysis-grid">
+            <section class="card dashboard-graph-card">
+                <div class="dashboard-graph-head">
+                    <h2 class="card-title">知识图谱与掌握结构</h2>
+                    <div class="dashboard-graph-legend" aria-hidden="true">
+                        <span><i class="graph-dot graph-dot-doc"></i>文档</span>
+                        <span><i class="graph-dot graph-dot-weak"></i>薄弱</span>
+                        <span><i class="graph-dot graph-dot-mid"></i>待巩固</span>
+                        <span><i class="graph-dot graph-dot-strong"></i>熟练</span>
                     </div>
                 </div>
-                <div class="section-head">
-                    <div class="section-label">知识掌握热力图快照</div>
-                    <button id="dashboard-heatmap-edit-toggle" class="section-menu-btn" type="button" aria-label="切换热力图编辑状态" aria-controls="dashboard-mastery-heatmap" aria-pressed="false">
-                        <span class="section-menu-btn-dot"></span>
-                        <span class="section-menu-btn-dot"></span>
-                        <span class="section-menu-btn-dot"></span>
-                    </button>
-                </div>
-                <div id="dashboard-heatmap-edit-status" class="section-edit-note" hidden></div>
-                <div id="dashboard-mastery-heatmap" class="mastery-heatmap">
-                    <div class="empty-state">加载中...</div>
-                </div>
-                <div class="section-label">知识依赖链追溯</div>
-                <div id="dashboard-dependency-chain" class="timeline-list">
-                    <div class="empty-state">加载中...</div>
-                </div>
-                <div class="section-label">知识来源追踪</div>
-                <div id="dashboard-concept-source-trace" class="mini-list">
-                    <div class="empty-state">加载中...</div>
+                <div id="dashboard-knowledge-graph" class="dashboard-graph">
+                    <div class="empty-state">图谱加载中...</div>
                 </div>
             </section>
 
-            <section class="card card-focus">
-                <div class="card-focus-head">
-                    <span class="card-kicker">核心模块 02</span>
-                    <span class="card-focus-badge">主展示</span>
+            <section class="card dashboard-cognitive-card">
+                <div class="dashboard-cognitive-head">
+                    <h2 class="card-title">认知判断与复习编排</h2>
+                    <span class="dash-chip">实时</span>
                 </div>
-                <h2 class="card-title">学习者画像构建</h2>
-                <p class="card-desc">结合显性与隐性反馈识别学生在不同媒介上的互动偏好，推断学习风格与最佳学习时段，为内容推荐与路径调整提供依据。</p>
-                <div id="dashboard-persona-stage" class="persona-stage">
+                <div class="dash-subhead">复习压力</div>
+                <div id="dashboard-review-forecast" class="forecast-grid">
                     <div class="empty-state">加载中...</div>
                 </div>
-                <div class="profile-summary">
-                    <div class="metric-tile">
-                        <div class="metric-tile-label">学习风格</div>
-                        <div id="dashboard-style" class="metric-tile-value" style="font-size:22px;">加载中...</div>
-                        <div id="dashboard-style-method" class="metric-tile-note">画像推断方式: --</div>
-                    </div>
-                    <div class="metric-tile">
-                        <div class="metric-tile-label">学习节奏</div>
-                        <div id="dashboard-best-time" class="metric-tile-value" style="font-size:20px;">最佳学习时段: --</div>
-                        <div id="dashboard-focus" class="metric-tile-note">注意力集中时间: --</div>
-                    </div>
-                </div>
-                <div class="section-label">学习风格强度</div>
-                <div class="score-list">
-                    <div class="score-item">
-                        <div class="score-head"><span>视觉型偏好</span><span id="style-score-visual">0%</span></div>
-                        <div class="score-bar"><div id="style-bar-visual" class="score-fill"></div></div>
-                    </div>
-                    <div class="score-item">
-                        <div class="score-head"><span>听觉型偏好</span><span id="style-score-auditory">0%</span></div>
-                        <div class="score-bar"><div id="style-bar-auditory" class="score-fill"></div></div>
-                    </div>
-                    <div class="score-item">
-                        <div class="score-head"><span>动觉型偏好</span><span id="style-score-kinesthetic">0%</span></div>
-                        <div class="score-bar"><div id="style-bar-kinesthetic" class="score-fill"></div></div>
-                    </div>
-                </div>
-                <div class="section-label">内容交互偏好</div>
-                <div id="dashboard-media-preferences" class="mini-list">
-                    <div class="empty-state">加载中...</div>
-                </div>
-                <div class="section-label">画像证据</div>
-                <div id="dashboard-profile-traits" class="intervention-list">
-                    <div class="empty-state">加载中...</div>
+                <div class="dash-subhead">薄弱知识点 Top 5</div>
+                <div class="dash-mini-chart">
+                    <canvas id="dashboard-mastery-bars"></canvas>
+                    <div class="dash-chart-empty" id="dashboard-mastery-bars-empty" hidden>暂无知识点数据</div>
                 </div>
             </section>
         </div>
 
+        <section class="card dashboard-profile-card">
+            <div class="dashboard-profile-head">
+                <h2 class="card-title">学习者画像</h2>
+                <div class="profile-chips">
+                    <span class="profile-chip">主导风格 <b id="dashboard-style">--</b></span>
+                    <span class="profile-chip">最佳时段 <b id="dashboard-best-time">--</b></span>
+                    <span class="profile-chip">专注时长 <b id="dashboard-focus">--</b></span>
+                </div>
+            </div>
+            <div class="dashboard-profile-body">
+                <div class="profile-chart-panel">
+                    <div class="profile-chart-title">学习风格与行为维度</div>
+                    <div class="profile-chart-box">
+                        <canvas id="dashboard-style-radar"></canvas>
+                        <div class="dash-chart-empty" id="dashboard-style-radar-empty" hidden>暂无画像数据</div>
+                    </div>
+                </div>
+                <div class="profile-chart-panel">
+                    <div class="profile-chart-title">内容交互偏好</div>
+                    <div class="profile-chart-box profile-donut-box">
+                        <canvas id="dashboard-content-chart"></canvas>
+                        <div class="profile-donut-center"><b id="dashboard-content-total">0</b><span>次互动</span></div>
+                        <div class="dash-chart-empty" id="dashboard-content-chart-empty" hidden>暂无内容交互数据</div>
+                    </div>
+                    <div class="profile-donut-legend" id="dashboard-content-legend"></div>
+                </div>
+            </div>
+        </section>
+
         <section class="card capability-alignment">
             <h2 class="card-title">前后端能力对齐视图</h2>
-            <p class="card-desc">以下四项能力由主仪表盘直接展示并绑定后端汇总数据，不再依赖独立演示页面。</p>
+            <p class="card-desc">以下能力由主仪表盘直接展示并绑定后端汇总数据，图表已移至顶部数据区。</p>
             <div class="capability-grid">
                 <div class="capability-panel">
                     <div class="capability-panel-title">📊 知识点热力图（5级掌握度可视化）</div>
@@ -2026,20 +2036,6 @@
                 </div>
 
                 <div class="capability-panel">
-                    <div class="capability-panel-title">📉 数据分析图表（Chart.js集成）</div>
-                    <div class="capability-chart-grid">
-                        <div class="capability-chart-card">
-                            <div class="capability-chart-title">掌握度分层</div>
-                            <div class="capability-chart-wrap"><canvas id="dashboard-mastery-chart"></canvas></div>
-                        </div>
-                        <div class="capability-chart-card">
-                            <div class="capability-chart-title">诊断类别分布</div>
-                            <div class="capability-chart-wrap"><canvas id="dashboard-diagnosis-chart"></canvas></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="capability-panel">
                     <div class="capability-panel-title">🛤️ AI推荐学习路径（Timeline视图）</div>
                     <div id="dashboard-learning-path-timeline" class="timeline-list">
                         <div class="empty-state">加载中...</div>
@@ -2049,16 +2045,15 @@
         </section>
     </div>
 
-    <div class="dashboard-drawer-backdrop" id="dashboardDrawerBackdrop"></div>
     <aside class="dashboard-drawer" id="dashboardDrawer" aria-hidden="true" aria-labelledby="dashboardDrawerTitle">
         <div class="dashboard-drawer-shell">
             <div class="dashboard-drawer-header">
                 <div>
                     <div id="dashboardDrawerKicker" class="dashboard-drawer-kicker">按需查看</div>
                     <h2 id="dashboardDrawerTitle" class="dashboard-drawer-title">请选择一个模块</h2>
-                    <p id="dashboardDrawerDesc" class="dashboard-drawer-desc">从头图右上角点击对应入口后，会在这里展示详细内容。</p>
+                    <p id="dashboardDrawerDesc" class="dashboard-drawer-desc">从顶部工具栏点击对应入口后，会在这里展示详细内容。</p>
                 </div>
-                <button class="dashboard-drawer-close" id="dashboardDrawerClose" type="button" aria-label="关闭右侧栏">关闭</button>
+                <button class="dashboard-drawer-close" id="dashboardDrawerClose" type="button" aria-label="关闭右侧栏">×</button>
             </div>
             <div class="dashboard-drawer-body">
                 <section class="dashboard-drawer-panel" data-panel="data" data-kicker="按需查看 01" data-title="多源学习数据" data-desc="把学习内容、作答样本、高频主题和活跃时段集中放进右侧栏，需要时再展开查看。">
@@ -2177,8 +2172,9 @@
     <script src="assets/js/shared/project-local-data.js?v=20260330-authfix"></script>
     <script src="assets/js/shared/space-cloud-store.js?v=20260403-sidebarspaces"></script>
     <script src="assets/js/shared/auth-ui.js?v=20260512-auth-register-autofill-fix"></script>
-    <script src="assets/js/shared/page-shell.js?v=20260416-streak-dock"></script>
+    <script src="assets/js/shared/page-shell.js?v=20261113-graph-merge"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
-    <script src="assets/js/pages/dashboard-page.js?v=20260414-kb-sync-fix"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+    <script src="assets/js/pages/dashboard-page.js?v=20261114-docked-panel-v1"></script>
 </body>
 </html>

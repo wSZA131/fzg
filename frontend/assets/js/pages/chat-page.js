@@ -79,6 +79,7 @@
   let openSessionMenuId = null;
   let sidebarHistoryCollapsed = false;
   let pendingAttachments = [];
+  let handoffAttachmentsPending = false;
   let pdfJsLoader = null;
   let agentModeEnabled = AUTO_AGENT_MODE_ENABLED;
   let typingMessageState = null;
@@ -276,6 +277,25 @@
     return '发送后附带文件元信息';
   }
 
+  function getAttachmentThumbLabel(attachment) {
+    const ext = String(attachment && attachment.name || '').split('.').pop().toUpperCase();
+    if (attachment.kind === 'pdf') return 'PDF';
+    if (attachment.kind === 'note') {
+      if (ext === 'MARKDOWN') return 'MD';
+      return ext.slice(0, 4) || 'TXT';
+    }
+    if (attachment.kind === 'audio') return '音频';
+    if (attachment.kind === 'video') return '视频';
+    return ext.slice(0, 4) || '文件';
+  }
+
+  function getAttachmentBadge(attachment) {
+    if (attachment.kind === 'image') return { text: '图片 · OCR', isOcr: true };
+    if (attachment.kind === 'pdf') return { text: 'PDF · 解析', isOcr: false };
+    if (attachment.kind === 'note') return { text: '文本', isOcr: false };
+    return { text: getAttachmentKindLabel(attachment.kind), isOcr: false };
+  }
+
   function buildAttachmentSignature(file) {
     return [
       String(file && file.name || ''),
@@ -288,6 +308,9 @@
     const mime = String(file && file.type || '').toLowerCase();
     const lowerName = String(file && file.name || '').toLowerCase();
     const kind = inferAttachmentKind(mime, lowerName);
+    const previewUrl = kind === 'image' && window.URL && typeof window.URL.createObjectURL === 'function'
+      ? window.URL.createObjectURL(file)
+      : '';
     return {
       id: `attach_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       signature: buildAttachmentSignature(file),
@@ -295,20 +318,32 @@
       name: String(file && file.name || '未命名文件'),
       mime: mime,
       size: Number(file && file.size || 0),
-      kind: kind
+      kind: kind,
+      previewUrl: previewUrl
     };
+  }
+
+  function releasePendingAttachmentPreview(attachment) {
+    if (!attachment || !attachment.previewUrl) return;
+    try {
+      window.URL.revokeObjectURL(attachment.previewUrl);
+    } catch (error) {
+      // 忽略预览地址释放失败。
+    }
+    attachment.previewUrl = '';
   }
 
   function summarizePendingAttachmentForMessage(attachment) {
     return {
       name: attachment.name,
       kind: getAttachmentKindLabel(attachment.kind),
-      meta: `${attachment.mime || 'unknown'} · ${formatFileSize(attachment.size)}`,
+      meta: formatFileSize(attachment.size),
       note: getAttachmentReadHint(attachment.kind)
     };
   }
 
   function clearPendingAttachments() {
+    pendingAttachments.forEach(releasePendingAttachmentPreview);
     pendingAttachments = [];
     const fileInput = document.getElementById('composerFileInput');
     if (fileInput) {
@@ -331,6 +366,7 @@
 
       const normalized = normalizePendingAttachment(file);
       if (seen.has(normalized.signature)) {
+        releasePendingAttachmentPreview(normalized);
         ignoredCount += 1;
         return;
       }
@@ -348,6 +384,10 @@
   }
 
   function removePendingAttachment(attachmentId) {
+    const target = pendingAttachments.find(function (item) {
+      return item.id === attachmentId;
+    });
+    releasePendingAttachmentPreview(target);
     pendingAttachments = pendingAttachments.filter(function (item) {
       return item.id !== attachmentId;
     });
@@ -364,25 +404,41 @@
       return;
     }
 
+    const cards = pendingAttachments.map(function (attachment) {
+      const badge = getAttachmentBadge(attachment);
+      const thumb = attachment.kind === 'image' && attachment.previewUrl
+        ? `<div class="attachment-thumb"><img class="attachment-thumb-img" src="${escapeHtml(attachment.previewUrl)}" alt=""></div>`
+        : `<div class="attachment-thumb is-${escapeHtml(attachment.kind)}">${escapeHtml(getAttachmentThumbLabel(attachment))}</div>`;
+      const tooltip = `${attachment.name} · ${getAttachmentReadHint(attachment.kind)}`;
+      return `
+        <div class="attachment-card" title="${escapeHtml(tooltip)}">
+          ${thumb}
+          <div class="attachment-info">
+            <div class="attachment-name">${escapeHtml(attachment.name)}</div>
+            <div class="attachment-meta">
+              <span class="attachment-badge ${badge.isOcr ? 'is-ocr' : ''}">${escapeHtml(badge.text)}</span>
+              <span>${escapeHtml(formatFileSize(attachment.size))}</span>
+            </div>
+          </div>
+          <button type="button" class="attachment-remove" data-remove-attachment="${escapeHtml(attachment.id)}" aria-label="移除附件">×</button>
+        </div>
+      `;
+    }).join('');
+
     container.hidden = false;
     container.innerHTML = `
-      <div class="composer-attachments-head">
-        <span>已选择 ${pendingAttachments.length} 个附件，直接发送会先让 AI 读取资料。</span>
-        <button type="button" class="composer-attachments-clear" data-clear-attachments>清空</button>
-      </div>
-      <div class="composer-attachment-list">
-        ${pendingAttachments.map(function (attachment) {
-          return `
-            <div class="composer-attachment-item">
-              <div class="composer-attachment-main">
-                <div class="composer-attachment-name">${escapeHtml(attachment.name)}</div>
-                <div class="composer-attachment-meta">${escapeHtml(getAttachmentKindLabel(attachment.kind))} · ${escapeHtml(attachment.mime || 'unknown')} · ${escapeHtml(formatFileSize(attachment.size))}</div>
-                <div class="composer-attachment-meta">${escapeHtml(getAttachmentReadHint(attachment.kind))}</div>
-              </div>
-              <button type="button" class="composer-attachment-remove" data-remove-attachment="${escapeHtml(attachment.id)}" aria-label="移除附件">×</button>
-            </div>
-          `;
-        }).join('')}
+      <div class="attachment-strip">
+        <div class="attachment-strip-head">
+          <div class="attachment-strip-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+            </svg>
+            <span>附件 ${pendingAttachments.length}</span>
+            <span class="attachment-strip-hint">发送时自动读取</span>
+          </div>
+          <button type="button" class="attachment-strip-clear" data-clear-attachments>全部移除</button>
+        </div>
+        <div class="attachment-grid">${cards}</div>
       </div>
     `;
 
@@ -1120,7 +1176,12 @@
       }
 
       if (evt.type === 'retry') {
-        setTypingMessageText(`首轮未命中 ${String(evt.tool || '知识库工具')}，正在强制重试...`);
+        const retryTool = String(evt.tool || '');
+        if (retryTool === 'local_rule_fallback') {
+          setTypingMessageText('AI 通道暂不可用，已切换为本地规则回答...');
+        } else {
+          setTypingMessageText(`首轮未命中 ${retryTool || '知识库工具'}，正在补充检索...`);
+        }
         return;
       }
 
@@ -1160,21 +1221,30 @@
           const kind = escapeHtml(String(attachment.kind || '文件'));
           const name = escapeHtml(String(attachment.name || '未命名文件'));
           const meta = escapeHtml(String(attachment.meta || ''));
-          const note = escapeHtml(String(attachment.note || ''));
           return `
             <div class="message-attachment-card">
-              <div class="message-attachment-top">
+              <div class="message-attachment-info">
                 <div class="message-attachment-name">${name}</div>
-                <div class="message-attachment-tag">${kind}</div>
+                ${meta ? `<div class="message-attachment-meta">${meta}</div>` : ''}
               </div>
-              ${meta ? `<div class="message-attachment-meta">${meta}</div>` : ''}
-              ${note ? `<div class="message-attachment-note">${note}</div>` : ''}
+              <span class="message-attachment-tag">${kind}</span>
             </div>
           `;
         }).join('')}
       </div>
     `;
   }
+
+  const TOOL_DISPLAY_NAMES = {
+    tool_get_student_mastery: '查询掌握度',
+    tool_query_knowledge_graph: '查询知识图谱',
+    tool_generate_learning_plan: '生成学习计划',
+    tool_diagnose_mistake: '错因诊断',
+    tool_search_learning_kb: '检索学习资料',
+    tool_graph_rag_search: '图谱增强检索',
+    local_rule_fallback: '本地规则兜底',
+    none: '未调用工具'
+  };
 
   function summarizeWorkflowStep(step, index) {
     if (!step || typeof step !== 'object') {
@@ -1185,7 +1255,8 @@
       };
     }
 
-    const toolName = String(step.tool_name || step.tool || `step_${index + 1}`);
+    const rawToolName = String(step.tool_name || step.tool || `step_${index + 1}`);
+    const toolName = TOOL_DISPLAY_NAMES[rawToolName] || rawToolName;
     const status = String(step.status || 'success');
     const latency = Number(step.latency_ms || 0);
     const summary = String(step.tool_output_summary || '').trim();
@@ -1700,7 +1771,7 @@
             ${matchedConcepts.length ? `<div style="margin:8px 0 0;"><div style="font-size:12px;color:#64748b;margin-bottom:6px;">命中的图谱概念</div><div style="display:flex;flex-wrap:wrap;gap:8px;">${renderKbPills(matchedConcepts, { background: '#e6f4ea', color: '#166534' })}</div></div>` : ''}
             ${graphRelationHtml ? `<div style="margin-top:10px;padding:10px 12px;border-radius:12px;background:#f8fbff;border:1px solid #dbe7f5;"><div style="font-size:12px;color:#64748b;margin-bottom:6px;">关联关系</div>${graphRelationHtml}</div>` : ''}
             ${tags.length ? `<div style="margin-top:10px;"><div style="display:flex;flex-wrap:wrap;gap:8px;">${renderKbPills(tags.slice(0, 6), { background: '#fef3c7', color: '#92400e' })}</div></div>` : ''}
-            <button onclick="insertKBResultToInput('${escapeJsString(title)}')" 
+            <button type="button" data-kb-title="${escapeHtmlForKB(title)}"
                     style="background: #4CAF50; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 12px; transition: background 0.2s; margin-top: 8px;">
               引用这个答案
             </button>
@@ -1721,15 +1792,6 @@
     return String(text || '').replace(/[&<>"']/g, m => map[m]);
   }
 
-  function escapeJsString(str) {
-    return String(str || '')
-      .replace(/\\/g, '\\\\')
-      .replace(/'/g, "\\'")
-      .replace(/"/g, '\\"')
-      .replace(/\n/g, '\\n')
-      .replace(/\r/g, '\\r');
-  }
-
   function insertKBResultToInput(title) {
     const input = document.getElementById('questionInput');
     if (input) {
@@ -1740,6 +1802,13 @@
     }
   }
   window.insertKBResultToInput = insertKBResultToInput;
+
+  // 事件委托替代内联 onclick，避免标题中的引号/实体跳出字符串执行脚本。
+  document.addEventListener('click', function (event) {
+    const trigger = event.target && event.target.closest ? event.target.closest('[data-kb-title]') : null;
+    if (!trigger) return;
+    insertKBResultToInput(trigger.getAttribute('data-kb-title') || '');
+  });
 
   function switchKBSearchMode(mode) {
     if (KB_SEARCH_MODES[mode] || Object.values(KB_SEARCH_MODES).includes(mode)) {
@@ -1788,7 +1857,9 @@
     }
 
     const metaItems = [];
-    const showMeta = sender === 'ai' && opts.showMeta === true;
+    // 只要携带结构化证据/元信息就展示，避免智能体返回的 tool_calls、知识库命中被静默丢弃。
+    const hasStructuredMeta = !!(opts.evidence || opts.meta);
+    const showMeta = sender === 'ai' && (opts.showMeta === true || hasStructuredMeta);
     if (showMeta && opts.source) {
       metaItems.push(`<span class="meta-chip">来源：${escapeHtml(opts.source)}</span>`);
     }
@@ -2205,6 +2276,10 @@
     try {
       const response = await fetch(`${API_BASE}/api/tasks/${encodeURIComponent(taskModalTaskId)}`);
       const data = await response.json();
+      if (!response.ok) {
+        // 503（Celery 未启用）等错误也带有 error_message，合并进弹窗展示真实原因。
+        data.error = data.error_message || data.error || `任务状态查询失败（HTTP ${response.status}）`;
+      }
       openTaskStatusModal(taskModalTaskId, data);
 
       const terminalStates = ['SUCCESS', 'FAILURE', 'REVOKED'];
@@ -2416,7 +2491,7 @@
         return item && item.kind === 'image';
       });
 
-      if (imageAttachment) {
+      if (imageAttachment && attachmentsToSend.length === 1) {
         const session = ensureActiveSession();
         const streamEvents = [];
         const agentData = await askTutorAgentStream({
@@ -2534,6 +2609,15 @@
     } catch (error) {
       removeTypingMessage();
       if (attachmentsToSend.length && !pendingAttachments.length) {
+        attachmentsToSend.forEach(function (item) {
+          if (item.kind === 'image' && !item.previewUrl && item.file) {
+            try {
+              item.previewUrl = window.URL.createObjectURL(item.file);
+            } catch (previewError) {
+              item.previewUrl = '';
+            }
+          }
+        });
         pendingAttachments = attachmentsToSend;
         renderPendingAttachments();
       }
@@ -2558,9 +2642,28 @@
     }
   }
 
+  function applySessionFromUrl() {
+    const params = new URLSearchParams(window.location.search || '');
+    const sessionId = String(params.get('session') || '').trim();
+    if (!sessionId) return;
+
+    if (chatSessions.some(function (session) { return session.id === sessionId; })) {
+      activeSessionId = sessionId;
+    }
+
+    params.delete('session');
+    const nextQuery = params.toString();
+    try {
+      window.history.replaceState({}, '', nextQuery ? `${window.location.pathname}?${nextQuery}` : window.location.pathname);
+    } catch (error) {
+      // 忽略历史记录 API 不可用的情况。
+    }
+  }
+
   function initConversationUI() {
     restoreSidebarHistoryState();
     loadSessionsFromLocal();
+    applySessionFromUrl();
     ensureActiveSession();
 
     const active = getActiveSession();
@@ -2626,40 +2729,6 @@
 
   function initAgentExperienceControls() {
     loadAgentModeState();
-    const kbSaveBtn = document.getElementById('kbSaveBtn');
-    const kbSearchBtn = document.getElementById('kbSearchBtn');
-
-    if (kbSaveBtn && !kbSaveBtn.dataset.bound) {
-      kbSaveBtn.addEventListener('click', async function () {
-        if (isAskingQuestion) return;
-        try {
-          await ingestKnowledgeFromInput();
-        } catch (error) {
-          addMessage(withSuggestion('知识库写入失败', error, '确认后端可用并重试'), 'ai', {
-            source: 'kb_ingest',
-            aiUsed: false,
-            error: error && error.message ? error.message : 'kb_ingest_error'
-          });
-        }
-      });
-      kbSaveBtn.dataset.bound = '1';
-    }
-
-    if (kbSearchBtn && !kbSearchBtn.dataset.bound) {
-      kbSearchBtn.addEventListener('click', async function () {
-        if (isAskingQuestion) return;
-        try {
-          await searchKnowledgeFromInput();
-        } catch (error) {
-          addMessage(withSuggestion('知识库检索失败', error, '确认后端可用并重试'), 'ai', {
-            source: 'kb_search',
-            aiUsed: false,
-            error: error && error.message ? error.message : 'kb_search_error'
-          });
-        }
-      });
-      kbSearchBtn.dataset.bound = '1';
-    }
   }
 
   function initTaskModal() {
@@ -2723,12 +2792,56 @@
     }
   }
 
+  async function applyAttachmentHandoffFromUrl() {
+    const params = new URLSearchParams(window.location.search || '');
+    const handoffId = String(params.get('handoff') || '').trim();
+    if (!handoffId) return false;
+
+    let payload = null;
+    try {
+      if (window.AttachmentHandoff && typeof window.AttachmentHandoff.consume === 'function') {
+        payload = await window.AttachmentHandoff.consume(handoffId);
+      }
+    } catch (error) {
+      console.warn('附件交接读取失败:', error);
+    }
+
+    params.delete('handoff');
+    const next = params.toString();
+    try {
+      window.history.replaceState({}, '', next ? `${window.location.pathname}?${next}` : window.location.pathname);
+    } catch (error) {
+      // 忽略历史记录 API 不可用的情况。
+    }
+
+    if (!payload || !Array.isArray(payload.files) || !payload.files.length) {
+      addMessage('附件接收失败，请在智能问答页重新添加附件后再发送。', 'ai', {
+        badge: '附件',
+        source: 'attachment',
+        aiUsed: false,
+        error: 'attachment_handoff_missing'
+      });
+      return false;
+    }
+
+    handoffAttachmentsPending = true;
+    addPendingAttachments(payload.files);
+    if (payload.question) {
+      const input = document.getElementById('questionInput');
+      if (input && !input.value.trim()) {
+        input.value = payload.question;
+      }
+    }
+    return true;
+  }
+
   function applyStartupQuestion() {
     const params = new URLSearchParams(window.location.search || '');
     const startupQuestion = String(params.get('q') || '').trim();
-    if (!startupQuestion) return;
+    if (!startupQuestion && !pendingAttachments.length) return;
 
     askQuestion(startupQuestion);
+    handoffAttachmentsPending = false;
     params.delete('q');
     const next = params.toString();
     window.history.replaceState({}, '', next ? `${window.location.pathname}?${next}` : window.location.pathname);
@@ -2737,7 +2850,9 @@
   function initReactiveBindings() {
     if (window.UserContext && typeof window.UserContext.onChange === 'function') {
       window.UserContext.onChange(function () {
-        clearPendingAttachments();
+        if (!handoffAttachmentsPending) {
+          clearPendingAttachments();
+        }
         updateUserBadge();
         initConversationUI();
       });
@@ -2750,7 +2865,7 @@
     });
   }
 
-  function init() {
+  async function init() {
     updateUserBadge();
     initSidebarHistory();
     initConversationUI();
@@ -2760,6 +2875,7 @@
     initTaskModal();
     initGlobalSidebar();
     initReactiveBindings();
+    await applyAttachmentHandoffFromUrl();
     refreshAiStatus();
     applyStartupQuestion();
     focusComposer();
