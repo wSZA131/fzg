@@ -271,13 +271,16 @@
     const wrongQuestionCount = toNumber(dataPool.wrong_question_count, toNumber(interaction.wrong_questions, 0));
     const qaSampleTotal = toNumber(dataPool.qa_sample_total, toNumber(interaction.qa_sample_total, 0));
     const dataSourceTotal = totalRecords + spaceContentCount;
+    const materialKnowledge = dataPool.material_knowledge || {};
+    const knowledgePointCount = toNumber(materialKnowledge.unique_knowledge_point_count, 0);
+    const retrievalReadyCount = toNumber(materialKnowledge.retrieval_ready_count, 0);
 
     setText('data-source-total', dataSourceTotal);
     setText('data-learning-content', `${learningContentRecords}条 / ${spaceContentCount}份`);
     setText(
       'data-learning-content-note',
       spaceContentCount > 0
-        ? `已从 ${spaceCount} 个空间读取 ${spaceContentCount} 份现有内容，并累计沉淀 ${learningContentRecords} 条学习记录`
+        ? `已从 ${spaceCount} 个空间读取 ${spaceContentCount} 份内容（${retrievalReadyCount} 份可检索），抽取知识点 ${knowledgePointCount} 个，累计沉淀 ${learningContentRecords} 条学习记录`
         : '当前还没有空间内容，上传资料后这里会自动读取并统计'
     );
     setText('data-qa-count', `${qaSampleTotal}条 / ${wrongQuestionCount}题`);

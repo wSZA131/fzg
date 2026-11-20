@@ -84,6 +84,7 @@ class AuthUser(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    bio: Mapped[str] = mapped_column(String(500), default="")
 
 
 class AuthSession(Base):

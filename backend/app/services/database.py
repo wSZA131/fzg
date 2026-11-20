@@ -114,6 +114,37 @@ def _normalize_space_item(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     now_ms = _now_ms()
     added_at = _to_int(item.get("addedAt"), now_ms)
     updated_at = _to_int(item.get("updatedAt"), added_at)
+    content = str(item.get("content") or "")
+
+    topics = [
+        str(topic or "").strip()[:40]
+        for topic in (item.get("topics") if isinstance(item.get("topics"), list) else [])
+        if str(topic or "").strip()
+    ][:8]
+
+    knowledge_points = []
+    seen_points = set()
+    for raw_point in (item.get("knowledgePoints") if isinstance(item.get("knowledgePoints"), list) else []):
+        if isinstance(raw_point, str):
+            title, detail, weight = raw_point.strip(), raw_point.strip(), 0.3
+        elif isinstance(raw_point, dict):
+            title = str(raw_point.get("title") or raw_point.get("name") or "").strip()
+            detail = str(raw_point.get("detail") or raw_point.get("content") or title).strip()
+            try:
+                weight = round(float(raw_point.get("weight") or 0.3), 3)
+            except Exception:
+                weight = 0.3
+        else:
+            continue
+        title = title[:40]
+        detail = detail[:240]
+        key = (title or detail).lower()
+        if not key or key in seen_points:
+            continue
+        seen_points.add(key)
+        knowledge_points.append({"title": title, "detail": detail, "weight": weight})
+        if len(knowledge_points) >= 8:
+            break
 
     return {
         "id": item_id,
@@ -122,10 +153,26 @@ def _normalize_space_item(item: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         "mime": str(item.get("mime") or "").strip(),
         "size": max(0, _to_int(item.get("size"), 0)),
         "source": str(item.get("source") or "").strip(),
-        "content": str(item.get("content") or ""),
+        "content": content,
         "summary": str(item.get("summary") or ""),
         "audioDataUrl": str(item.get("audioDataUrl") or ""),
         "fileDataUrl": str(item.get("fileDataUrl") or ""),
+        "contentPreview": str(item.get("contentPreview") or "")[:400],
+        "contentLength": max(0, _to_int(item.get("contentLength"), len(content))),
+        "textChunkCount": max(0, _to_int(item.get("textChunkCount"), 0)),
+        "textExtractMethod": str(item.get("textExtractMethod") or "")[:40],
+        "textExtractWarnings": [
+            str(warning or "")[:80]
+            for warning in (item.get("textExtractWarnings") if isinstance(item.get("textExtractWarnings"), list) else [])
+            if str(warning or "").strip()
+        ][:10],
+        "ocrProvider": str(item.get("ocrProvider") or "")[:40],
+        "ocrFallbackUsed": bool(item.get("ocrFallbackUsed", False)),
+        "ocrErrorCode": str(item.get("ocrErrorCode") or "")[:60],
+        "topics": topics,
+        "knowledgePoints": knowledge_points,
+        "knowledgePointCount": len(knowledge_points),
+        "retrievalReady": bool(item.get("retrievalReady", bool(content.strip()))),
         "addedAt": added_at,
         "updatedAt": updated_at,
     }
@@ -381,6 +428,35 @@ class JsonRepository:
                 self._save_items("auth_sessions.json", items)
             return changed
 
+    def list_auth_sessions(self, username: str) -> List[Dict[str, Any]]:
+        username = str(username or "").strip()
+        if not username:
+            return []
+        return [
+            dict(item)
+            for item in self._load_items("auth_sessions.json")
+            if str(item.get("username", "")).strip() == username
+        ]
+
+    def revoke_other_auth_sessions(self, username: str, keep_token_hash: str, revoked_at: str) -> int:
+        with _JSON_LOCK:
+            items = self._load_items("auth_sessions.json")
+            username = str(username or "").strip()
+            keep = str(keep_token_hash or "").strip()
+            revoked = 0
+            for item in items:
+                if str(item.get("username", "")).strip() != username:
+                    continue
+                if keep and str(item.get("token_hash", "")).strip() == keep:
+                    continue
+                if item.get("revoked_at"):
+                    continue
+                item["revoked_at"] = revoked_at
+                revoked += 1
+            if revoked:
+                self._save_items("auth_sessions.json", items)
+            return revoked
+
     def delete_auth_user_account(self, username: str) -> Dict[str, Any]:
         with _JSON_LOCK:
             username = str(username or "").strip()
@@ -518,6 +594,7 @@ class SqlRepository:
                 "created_at": row.created_at.isoformat() if row.created_at else None,
                 "updated_at": row.updated_at.isoformat() if row.updated_at else None,
                 "last_login_at": row.last_login_at.isoformat() if row.last_login_at else None,
+                "bio": str(getattr(row, "bio", "") or ""),
             }
 
     def get_auth_user_by_display_name(self, display_name: str) -> Optional[Dict[str, Any]]:
@@ -540,6 +617,7 @@ class SqlRepository:
                     "created_at": row.created_at.isoformat() if row.created_at else None,
                     "updated_at": row.updated_at.isoformat() if row.updated_at else None,
                     "last_login_at": row.last_login_at.isoformat() if row.last_login_at else None,
+                "bio": str(getattr(row, "bio", "") or ""),
                 }
         return None
 
@@ -553,6 +631,7 @@ class SqlRepository:
             row.display_name = user.get("display_name") or user["username"]
             row.password_hash = user.get("password_hash") or ""
             row.locale = user.get("locale") or "CN"
+            row.bio = str(user.get("bio") or "")[:500]
             if user.get("last_login_at"):
                 row.last_login_at = datetime.fromisoformat(user["last_login_at"])
 
@@ -565,6 +644,7 @@ class SqlRepository:
                 "created_at": row.created_at.isoformat() if row.created_at else None,
                 "updated_at": row.updated_at.isoformat() if row.updated_at else None,
                 "last_login_at": row.last_login_at.isoformat() if row.last_login_at else None,
+                "bio": str(getattr(row, "bio", "") or ""),
             }
 
     def get_auth_session_by_token_hash(self, token_hash: str) -> Optional[Dict[str, Any]]:
@@ -625,6 +705,42 @@ class SqlRepository:
             row.last_seen_at = datetime.fromisoformat(last_seen_at)
             return True
 
+    def list_auth_sessions(self, username: str) -> List[Dict[str, Any]]:
+        username = str(username or "").strip()
+        if not username:
+            return []
+        with get_session() as session:
+            rows = session.query(AuthSession).filter(AuthSession.username == username).all()
+            return [
+                {
+                    "session_id": row.session_id,
+                    "username": row.username,
+                    "token_hash": row.token_hash,
+                    "expires_at": row.expires_at.isoformat() if row.expires_at else None,
+                    "created_at": row.created_at.isoformat() if row.created_at else None,
+                    "last_seen_at": row.last_seen_at.isoformat() if row.last_seen_at else None,
+                    "revoked_at": row.revoked_at.isoformat() if row.revoked_at else None,
+                }
+                for row in rows
+            ]
+
+    def revoke_other_auth_sessions(self, username: str, keep_token_hash: str, revoked_at: str) -> int:
+        username = str(username or "").strip()
+        if not username:
+            return 0
+        with get_session() as session:
+            query = session.query(AuthSession).filter(
+                AuthSession.username == username,
+                AuthSession.revoked_at.is_(None),
+            )
+            if keep_token_hash:
+                query = query.filter(AuthSession.token_hash != str(keep_token_hash))
+            rows = query.all()
+            revoked_at_value = datetime.fromisoformat(revoked_at)
+            for row in rows:
+                row.revoked_at = revoked_at_value
+            return len(rows)
+
     def delete_auth_user_account(self, username: str) -> Dict[str, Any]:
         username = str(username or "").strip()
         summary = {
@@ -662,10 +778,30 @@ class SqlRepository:
         return summary
 
 
+def _ensure_auth_user_bio_column():
+    """为已存在的 auth_users 表补 bio 列。
+
+    项目没有迁移框架，create_all 只会建新表、不会改旧表。这里用一句
+    幂等 ALTER 兜底，SQLite 与 MySQL 语法一致；列已存在时捕获异常忽略。
+    """
+    if STORAGE_BACKEND != "sql":
+        return
+
+    try:
+        from sqlalchemy import text
+
+        with ENGINE.begin() as conn:
+            conn.execute(text("ALTER TABLE auth_users ADD COLUMN bio VARCHAR(500) DEFAULT ''"))
+    except Exception:
+        # 列已存在，或数据库不支持该语法时忽略
+        pass
+
+
 def init_storage():
     ensure_data_dir()
     if STORAGE_BACKEND == "sql" or SPACE_STORAGE_BACKEND == "sql":
         Base.metadata.create_all(bind=ENGINE)
+        _ensure_auth_user_bio_column()
 
 
 def _build_repository():
@@ -742,6 +878,14 @@ def revoke_auth_session(token_hash, revoked_at):
 
 def touch_auth_session(token_hash, last_seen_at):
     return repo.touch_auth_session(token_hash, last_seen_at)
+
+
+def list_auth_sessions(username):
+    return repo.list_auth_sessions(username)
+
+
+def revoke_other_auth_sessions(username, keep_token_hash, revoked_at):
+    return repo.revoke_other_auth_sessions(username, keep_token_hash, revoked_at)
 
 
 def delete_auth_user_account(username):

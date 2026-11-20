@@ -1,0 +1,48 @@
+{
+  "name": "坊知工 · 智能学习伴侣",
+  "short_name": "坊知工",
+  "description": "面向纺织专业教育场景的智能学习伴侣：拍照识题、智能问答、知识图谱与学习计划。",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "assets/images/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/images/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/images/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "智能问答",
+      "short_name": "问答",
+      "url": "./chat.html",
+      "icons": [{ "src": "assets/images/app-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "拍照识题",
+      "short_name": "识题",
+      "url": "./index.html",
+      "icons": [{ "src": "assets/images/app-icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

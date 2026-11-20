@@ -14,24 +14,36 @@ ARG PIP_INDEX_URL=https://repo.huaweicloud.com/repository/pypi/simple
 ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cpu
 ARG HF_ENDPOINT=https://hf-mirror.com
 ARG PREFETCH_EMBEDDING_MODEL=true
+# 低内存机型（≤2 GB）用 --build-arg LITE_MODE=true：
+# 跳过 torch 与 BGE 模型，镜像约 400 MB，运行内存约 700-900 MB，
+# 检索退化为 TF-IDF + FAISS，仍可覆盖完整知识库。
+ARG LITE_MODE=false
 
 WORKDIR /app
 
-# libgomp1 为 faiss / torch 的运行时依赖；curl 供健康检查
+# libgomp1：faiss / torch / onnxruntime 运行时依赖
+# libglib2.0-0：本地 OCR（opencv）运行时依赖
+# curl：容器健康检查
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl libgomp1 \
+    && apt-get install -y --no-install-recommends curl libgomp1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # 先装依赖，利用构建缓存
 COPY backend/requirements.txt backend/requirements.txt
-RUN pip install --index-url "${TORCH_INDEX_URL}" torch \
-    && pip install --index-url "${PIP_INDEX_URL}" -r backend/requirements.txt
+COPY backend/requirements.lite.txt backend/requirements.lite.txt
+RUN if [ "${LITE_MODE}" = "true" ]; then \
+        echo "[build] LITE_MODE: 跳过 torch，检索走 TF-IDF + FAISS"; \
+        pip install --index-url "${PIP_INDEX_URL}" -r backend/requirements.lite.txt; \
+    else \
+        pip install --index-url "${TORCH_INDEX_URL}" torch \
+        && pip install --index-url "${PIP_INDEX_URL}" -r backend/requirements.txt; \
+    fi
 
 # 预下载中文向量模型，避免容器首次启动时联网拉取（离线演示必需）
 ENV HF_ENDPOINT=${HF_ENDPOINT} \
     SENTENCE_TRANSFORMERS_HOME=/opt/models \
     HF_HOME=/opt/models/hf
-RUN if [ "${PREFETCH_EMBEDDING_MODEL}" = "true" ]; then \
+RUN if [ "${PREFETCH_EMBEDDING_MODEL}" = "true" ] && [ "${LITE_MODE}" != "true" ]; then \
         python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-small-zh-v1.5')"; \
     fi
 

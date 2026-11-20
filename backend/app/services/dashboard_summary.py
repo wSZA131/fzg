@@ -1,6 +1,7 @@
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 
+from .document_ingest import extract_knowledge_points
 from .topic_guard import filter_learning_topics, is_learning_topic
 
 
@@ -307,6 +308,7 @@ def build_data_pool_summary(
     hidden_metrics = hidden_metrics if isinstance(hidden_metrics, dict) else {}
     current_time = parse_datetime_safe(now) or datetime.now()
     blocked_set = normalize_blocked_topics(blocked_topics)
+    spaces, space_items = collect_space_items(space_payload)
     learning_evidence_exists = has_learning_evidence(
         content_logs=content_logs,
         qa_logs=qa_logs,
@@ -384,6 +386,45 @@ def build_data_pool_summary(
             "label": content_type_label(content_type),
             "title": short_text(item.get("title") or content_type_label(content_type), 28),
             "summary": short_text("、".join(topics) or str(item.get("source") or "内容录入"), 60),
+        })
+
+    # 上传资料抽取出的知识点同样计入知识点热度与最近动态，
+    # 让知识库不止服务问答，也能驱动仪表盘与题库。
+    legacy_extract_budget = 80
+    for item in space_items:
+        raw_topics = [
+            point.get("title") if isinstance(point, dict) else point
+            for point in (item.get("knowledgePoints") if isinstance(item.get("knowledgePoints"), list) else [])
+        ]
+        # 图片 OCR 的知识点可能是整句，过长的句子不作为主题
+        raw_topics = [
+            topic for topic in raw_topics
+            if topic and 2 <= len(str(topic).strip()) <= 16
+        ]
+        raw_topics.extend(item.get("topics") if isinstance(item.get("topics"), list) else [])
+        if not any(normalize_topic(topic) for topic in raw_topics) and legacy_extract_budget > 0:
+            # 兼容知识点字段上线前已上传的资料：按正文实时抽取
+            legacy_text = str(item.get("content") or "")[:2000]
+            if len(legacy_text.strip()) >= 20:
+                legacy_extract_budget -= 1
+                raw_topics.extend(
+                    point.get("title")
+                    for point in extract_knowledge_points(legacy_text, limit=4)
+                )
+        item_topics = filter_learning_topics(
+            [normalize_topic(topic) for topic in raw_topics if normalize_topic(topic)],
+            blocked_topics=blocked_set,
+            limit=6,
+        )
+        for topic in item_topics:
+            topic_counter[topic] += 1
+        dt = parse_datetime_safe(item.get("updatedAt")) or parse_datetime_safe(item.get("addedAt"))
+        recent_feed.append({
+            "timestamp": (dt.isoformat() if dt else ""),
+            "kind": "material",
+            "label": "资料上传",
+            "title": short_text(item.get("name") or "学习资料", 28),
+            "summary": short_text("、".join(item_topics) or "已完成知识点抽取", 60),
         })
 
     for item in qa_logs:
@@ -569,11 +610,21 @@ def build_data_pool_summary(
         + content_counter.get("other", 0)
     )
 
-    spaces, space_items = collect_space_items(space_payload)
     space_kind_counter = Counter()
+    knowledge_point_counter = Counter()
+    retrieval_ready_count = 0
     for item in space_items:
         kind = str(item.get("kind") or "document").strip().lower() or "document"
         space_kind_counter[kind] += 1
+        if item.get("retrievalReady"):
+            retrieval_ready_count += 1
+        for point in item.get("knowledgePoints") or []:
+            if isinstance(point, dict):
+                title = str(point.get("title") or "").strip()
+            else:
+                title = str(point or "").strip()
+            if title:
+                knowledge_point_counter[title] += 1
 
     space_content_count = len(space_items)
     learning_content_record_count = learning_record_count + space_content_count
@@ -595,6 +646,16 @@ def build_data_pool_summary(
         "space_content_count": space_content_count,
         "space_count": len(spaces),
         "space_kind_breakdown": dict(space_kind_counter),
+        "material_knowledge": {
+            "item_count": space_content_count,
+            "knowledge_point_count": sum(knowledge_point_counter.values()),
+            "unique_knowledge_point_count": len(knowledge_point_counter),
+            "retrieval_ready_count": retrieval_ready_count,
+            "top_points": [
+                {"title": title, "count": count}
+                for title, count in knowledge_point_counter.most_common(8)
+            ],
+        },
         "wrong_question_count": wrong_question_count,
         "question_draw_count": len(question_draw_logs),
         "question_answer_count": len(question_answer_logs),

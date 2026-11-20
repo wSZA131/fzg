@@ -7,6 +7,7 @@ patch 的兼容，同时规避循环依赖。
 from __future__ import annotations
 
 import random
+import re
 import uuid
 from datetime import datetime
 
@@ -24,6 +25,150 @@ def _server():
     """延迟获取 server 模块，保持共享函数与测试 patch 的兼容。"""
     from .. import server
     return server
+
+
+def _compact_text(text, limit=70):
+    compact = " ".join(str(text or "").split())
+    if len(compact) <= int(limit):
+        return compact
+    return compact[: max(1, int(limit))] + "..."
+
+
+def normalize_material_points(raw_points, limit=12):
+    points = []
+    seen = set()
+    for raw in raw_points if isinstance(raw_points, list) else []:
+        if len(points) >= limit:
+            break
+        if isinstance(raw, str):
+            title, detail = raw.strip(), raw.strip()
+        elif isinstance(raw, dict):
+            title = str(raw.get("title") or raw.get("name") or "").strip()
+            detail = str(raw.get("detail") or raw.get("content") or title).strip()
+        else:
+            continue
+        key = (title or detail).lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        points.append({"title": title or detail[:20], "detail": detail or title})
+    return points
+
+
+def collect_material_items(space_payload, item_ids=None, space_id=""):
+    """按条目或空间收集可用于出题的学习资料。"""
+    target_ids = {str(item or "").strip() for item in (item_ids or []) if str(item or "").strip()}
+    target_space = str(space_id or "").strip()
+    items = []
+    for space in (space_payload.get("spaces", []) if isinstance(space_payload, dict) else []):
+        if not isinstance(space, dict):
+            continue
+        current_space_id = str(space.get("id") or "").strip()
+        if target_space and current_space_id != target_space:
+            continue
+        for item in (space.get("items", []) if isinstance(space.get("items"), list) else []):
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("kind") or "").strip().lower() == "folder":
+                continue
+            item_id = str(item.get("id") or "").strip()
+            if target_ids and item_id not in target_ids:
+                continue
+            if not str(item.get("content") or "").strip() and not item.get("knowledgePoints"):
+                continue
+            items.append({**item, "spaceId": current_space_id, "spaceName": str(space.get("name") or "")})
+    return items
+
+
+def build_material_context(items, limit_chars=4000):
+    lines = []
+    for item in items if isinstance(items, list) else []:
+        name = str(item.get("name") or "学习资料").strip()
+        lines.append(f"【资料】{name}")
+        for point in normalize_material_points(item.get("knowledgePoints"), limit=8):
+            lines.append(f"- 知识点：{point['title']}｜{_compact_text(point['detail'], 120)}")
+        content = str(item.get("content") or "").strip()
+        if content:
+            lines.append(f"原文节选：{_compact_text(content, 1200)}")
+    return "\n".join(lines)[:limit_chars]
+
+
+def build_questions_from_material_points(concept, points, difficulty, count):
+    """无 AI 时依据知识点直接组题，保证资料出题链路可用。"""
+    s = _server()
+    pool = [point for point in (points or []) if str(point.get("detail") or "").strip()]
+    if not pool:
+        return []
+
+    concept_text = s.normalize_concept_name(concept or "") or _compact_text(pool[0]["title"], 24) or "资料知识点"
+    level = str(difficulty or "medium").strip().lower()
+    if level not in {"easy", "medium", "hard"}:
+        level = "medium"
+    target = max(1, min(10, int(count or 5)))
+    questions = []
+    for index in range(target):
+        point = pool[index % len(pool)]
+        title = _compact_text(point.get("title") or "该知识点", 24)
+        detail = _compact_text(point.get("detail"), 80)
+        if not detail:
+            continue
+
+        if index % 2 == 0:
+            distractors = []
+            for other in pool:
+                if other is point:
+                    continue
+                candidate = _compact_text(other.get("detail"), 60)
+                if candidate and candidate not in distractors and candidate != detail:
+                    distractors.append(candidate)
+                if len(distractors) >= 3:
+                    break
+            fallback_distractors = [
+                "资料中没有提到这一说法",
+                "资料中的表述与该说法相反",
+                "资料只给出了定义，并没有相关结论",
+            ]
+            for candidate in fallback_distractors:
+                if len(distractors) >= 3:
+                    break
+                if candidate not in distractors:
+                    distractors.append(candidate)
+            options = [f"A. {detail}"] + [
+                f"{letter}. {text}"
+                for letter, text in zip(["B", "C", "D"], distractors[:3])
+            ]
+            raw_item = {
+                "concept": concept_text,
+                "difficulty": level,
+                "question_type": "single_choice",
+                "question": f"根据学习资料，关于「{title}」的表述，正确的是（ ）",
+                "options": options,
+                "answer": "A",
+                "analysis": f"资料原文：{detail}",
+            }
+        else:
+            raw_item = {
+                "concept": concept_text,
+                "difficulty": level,
+                "question_type": "short_answer",
+                "question": f"请结合学习资料解释「{title}」，并说明它在资料中的作用。",
+                "options": [],
+                "answer": detail,
+                "analysis": f"作答时应覆盖资料中的关键表述：{detail}",
+            }
+
+        normalized = s.normalize_question_item(
+            raw_item,
+            fallback_id=f"qb-material-{uuid.uuid4().hex[:12]}",
+            creator="official_ai",
+            is_public_default=True,
+            bank_source="official_ai",
+        )
+        if normalized:
+            normalized["created_by"] = "official_ai"
+            normalized["bank_source"] = "official_ai"
+            questions.append(normalized)
+    return questions
 
 
 @question_bank_bp.route("/draw", methods=["GET"])
@@ -313,6 +458,124 @@ def generate_question_bank_question_api():
     ))
 
 
+@question_bank_bp.route("/generate_from_material", methods=["POST"])
+def generate_question_from_material_api():
+    """资料出题：基于上传资料抽取的知识点与正文生成练习题并入题库。"""
+    s = _server()
+    request_id = get_request_id()
+    data = request.json or {}
+    user_id, auth_error = s.resolve_request_user_id_from_json(data)
+    if auth_error:
+        return auth_error
+
+    raw_ids = data.get("item_ids") if isinstance(data.get("item_ids"), list) else []
+    item_ids = [str(item or "").strip() for item in raw_ids if str(item or "").strip()]
+    single_item_id = str(data.get("item_id") or "").strip()
+    if single_item_id and single_item_id not in item_ids:
+        item_ids.append(single_item_id)
+    space_id = str(data.get("space_id") or "").strip()
+    knowledge_point = str(data.get("knowledge_point") or "").strip()
+    difficulty = str(data.get("difficulty") or "medium").strip().lower()
+    try:
+        count = int(data.get("count", 5) or 5)
+    except Exception:
+        count = 5
+    count = max(1, min(10, count))
+
+    space_payload = s.get_user_space_payload(user_id)
+    materials = collect_material_items(space_payload, item_ids=item_ids, space_id=space_id)
+    if not materials:
+        return error_response(
+            request_id,
+            400,
+            "MATERIAL_NOT_FOUND",
+            "请先上传包含文字内容的学习资料，再尝试资料出题",
+        )
+
+    points = []
+    for item in materials:
+        points.extend(normalize_material_points(item.get("knowledgePoints"), limit=8))
+    if not points:
+        from ..services.document_ingest import extract_knowledge_points
+        for item in materials:
+            points.extend(normalize_material_points(
+                extract_knowledge_points(item.get("content"), limit=8),
+                limit=8,
+            ))
+    if not points:
+        # 没有结构化知识点时，用正文中的完整句子兜底，保证资料仍可出题
+        for item in materials:
+            body = str(item.get("content") or "")
+            for sentence in re.split(r"[。！？；!?;\n]+|(?<=\.)\s+", body):
+                sentence = str(sentence or "").strip()
+                if 16 <= len(sentence) <= 80:
+                    points.append({
+                        "title": sentence[:16],
+                        "detail": sentence,
+                        "weight": 0.2,
+                    })
+                if len(points) >= 8:
+                    break
+            if len(points) >= 8:
+                break
+    points = normalize_material_points(points, limit=16)
+    concept = (knowledge_point or (points[0]["title"] if points else "") or str(materials[0].get("name") or "")).strip()
+
+    material_context = build_material_context(materials)
+    questions, mode = s.generate_official_questions_with_ai(
+        concept,
+        difficulty,
+        count,
+        material_context=material_context,
+    )
+    if questions:
+        forced_concept = s.normalize_concept_name(concept or "")
+        if forced_concept:
+            for question in questions:
+                question["concept"] = forced_concept
+    else:
+        questions = build_questions_from_material_points(concept, points, difficulty, count)
+        mode = "material_local" if questions else mode
+
+    if not questions:
+        return error_response(
+            request_id,
+            502,
+            "QUESTION_GENERATE_FAILED",
+            "资料内容不足，暂未生成题目，请补充更完整的资料后重试",
+        )
+
+    official_items = s.load_official_question_bank_items()
+    official_items.extend(questions)
+    s.save_official_question_bank_items(official_items)
+
+    return jsonify(success_payload(
+        request_id,
+        message="资料出题完成",
+        user_id=user_id,
+        generate_mode=mode,
+        concept=concept,
+        generated_count=len(questions),
+        knowledge_points=points[:8],
+        material_count=len(materials),
+        material_names=[str(item.get("name") or "") for item in materials[:5]],
+        official_bank_count=len(s.load_official_question_bank_items()),
+        sample_questions=[
+            {
+                "id": q.get("id"),
+                "concept": q.get("concept"),
+                "difficulty": q.get("difficulty"),
+                "question_type": q.get("question_type"),
+                "question": q.get("question"),
+                "bank_source": q.get("bank_source", "official_ai"),
+            }
+            for q in questions[:5]
+        ],
+        error_code="",
+        error_message="",
+    ))
+
+
 @question_bank_bp.route("/answer", methods=["POST"])
 def answer_question_bank_question_api():
     """提交题库答案并返回判题反馈。"""
@@ -534,6 +797,99 @@ def answer_question_bank_question_api():
         recommendations=(runtime_refresh.get("recommendations", []) if isinstance(runtime_refresh, dict) else []),
         review_reminders=(runtime_refresh.get("review_reminders", {}) if isinstance(runtime_refresh, dict) else {}),
         next_action="继续点击题库抽题进行下一题",
+        error_code="",
+        error_message="",
+    ))
+
+
+@question_bank_bp.route("/practice-session", methods=["POST"])
+def save_practice_session_api():
+    """保存一次完整练习的汇总结果。
+
+    单题作答已通过 /answer 落库，但整场练习的标题、用时、正确率此前只存在
+    浏览器 localStorage，换设备即丢失。这里按事件方式补一条汇总记录。
+    """
+    s = _server()
+    request_id = get_request_id()
+    data = request.get_json(silent=True) or {}
+    user_id, auth_error = s.resolve_request_user_id_from_json(data)
+    if auth_error:
+        return auth_error
+
+    session = data.get("session")
+    if not isinstance(session, dict):
+        return error_response(request_id, 400, "INVALID_INPUT", "session 必须是对象")
+
+    raw_items = session.get("items") if isinstance(session.get("items"), list) else []
+    answers = session.get("answers") if isinstance(session.get("answers"), dict) else {}
+
+    total_count = 0
+    answered_count = 0
+    correct_count = 0
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+        total_count += 1
+        answer = answers.get(str(item.get("id") or ""))
+        if not isinstance(answer, dict):
+            continue
+        answered_count += 1
+        if answer.get("correct"):
+            correct_count += 1
+
+    try:
+        elapsed_seconds = int(float(session.get("elapsedSeconds") or 0))
+    except (TypeError, ValueError):
+        elapsed_seconds = 0
+
+    payload = {
+        "id": str(session.get("id") or "").strip() or uuid.uuid4().hex,
+        "timestamp": datetime.now().isoformat(),
+        "title": str(session.get("title") or "").strip()[:120],
+        "concept": str(session.get("concept") or "").strip()[:80],
+        "scope": str(session.get("scope") or "").strip()[:40],
+        "difficulty": str(session.get("difficulty") or "").strip()[:40],
+        "total_count": total_count,
+        "answered_count": answered_count,
+        "correct_count": correct_count,
+        "accuracy": round(correct_count / total_count, 4) if total_count else 0.0,
+        "elapsed_seconds": max(0, elapsed_seconds),
+        "completed_at": str(session.get("completedAt") or ""),
+        "source": "practice_page",
+    }
+    s.append_user_event(user_id, "practice_session", payload)
+
+    return jsonify(success_payload(
+        request_id,
+        message="练习记录已保存",
+        session=payload,
+        error_code="",
+        error_message="",
+    ))
+
+
+@question_bank_bp.route("/practice-sessions", methods=["GET"])
+def list_practice_sessions_api():
+    """读取练习历史，按时间倒序，最多 50 条。"""
+    s = _server()
+    request_id = get_request_id()
+    user_id, auth_error = s.resolve_request_user_id_from_args()
+    if auth_error:
+        return auth_error
+
+    raw_items = s.load_user_event_list(user_id, "practice_session")
+    items = [
+        s.deep_copy_data(item, {})
+        for item in (raw_items if isinstance(raw_items, list) else [])
+        if isinstance(item, dict)
+    ]
+    items.sort(key=lambda item: str(item.get("timestamp") or ""), reverse=True)
+
+    return jsonify(success_payload(
+        request_id,
+        user_id=user_id,
+        count=len(items),
+        items=items[:50],
         error_code="",
         error_message="",
     ))

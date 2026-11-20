@@ -1,0 +1,129 @@
+/* ==========================================================
+   移动端外壳
+   ----------------------------------------------------------
+   职责：底部 Tab 导航 + 安全区适配 + 触屏细节。
+   默认不显示，只在窄屏媒体查询内生效，桌面端零影响。
+   Tab 节点由 assets/js/shared/page-shell.js 依据现有侧边栏
+   链接动态生成，因此导航数据只有一份来源。
+   ========================================================== */
+
+.mobile-tabbar {
+  display: none;
+}
+
+body.has-mobile-tabbar .mobile-tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1200;
+  align-items: stretch;
+  justify-content: space-around;
+  gap: 2px;
+  padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+  background: rgba(255, 255, 255, 0.94);
+  border-top: 1px solid var(--st-line, #ececf1);
+  box-shadow: 0 -6px 24px rgba(16, 24, 40, 0.06);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  backdrop-filter: saturate(180%) blur(14px);
+  transition: transform 0.2s ease;
+}
+
+.mobile-tabbar-item {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 5px 2px;
+  border-radius: 10px;
+  color: var(--st-muted, #8a90a0);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.16s ease, background-color 0.16s ease;
+}
+
+.mobile-tabbar-item:active {
+  background: var(--st-surface, #f7f7f9);
+}
+
+.mobile-tabbar-item.active {
+  color: var(--st-ink, #14161b);
+}
+
+.mobile-tabbar-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+}
+
+.mobile-tabbar-icon svg {
+  display: block;
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mobile-tabbar-item.active .mobile-tabbar-icon svg {
+  stroke-width: 2;
+}
+
+.mobile-tabbar-label {
+  max-width: 100%;
+  font-size: 10.5px;
+  line-height: 1.25;
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 760px) {
+  body.has-mobile-tabbar .mobile-tabbar {
+    display: flex;
+  }
+
+  /* 给内容区留出 Tab 高度（约 60px）并留 4px 余量，避免最后一段内容被永久遮挡 */
+  body.has-mobile-tabbar {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* 输入法唤起 / 输入框聚焦时收起 Tab，避免遮挡发送按钮 */
+  body.has-mobile-tabbar.tabbar-suppressed .mobile-tabbar {
+    transform: translateY(calc(100% + 12px));
+  }
+}
+
+@media (max-width: 380px) {
+  .mobile-tabbar-label {
+    font-size: 9.5px;
+  }
+
+  .mobile-tabbar-icon,
+  .mobile-tabbar-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* ----------------------------------------------------------
+   触屏细节：仅在无精确指针（触摸设备）上启用
+   ---------------------------------------------------------- */
+@media (hover: none) and (pointer: coarse) {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    -webkit-tap-highlight-color: transparent;
+  }
+}

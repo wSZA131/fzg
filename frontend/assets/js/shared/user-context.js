@@ -276,12 +276,13 @@
 
   function setLocale(locale) {
     const normalized = normalizeLocale(locale);
+    // 两种情况都写独立偏好：登录态被清空后仍能沿用上次选择的语言
+    persistLocale(normalized);
+
     const auth = getAuthState();
     if (auth && auth.user) {
       auth.user.locale = normalized;
       setStoredAuthText(JSON.stringify(auth));
-    } else {
-      persistLocale(normalized);
     }
     dispatchContextChange('locale_changed');
     return normalized;

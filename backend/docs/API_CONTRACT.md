@@ -151,3 +151,117 @@ mapping_result fields:
 - 原始内容: string
 - 知识点: string
 - 置信度: number (0-1)
+
+## POST /api/auth/register
+
+请求：
+- username: string（3-32 位）
+- password: string（至少 8 位，且含字母与数字）
+- display_name: string
+- locale: CN|EN
+- guest_user_id: string（可选；注册时自动继承访客学习数据）
+
+响应新增：
+- recovery_code: string（格式 XXXX-XXXX，只返回一次，服务端仅存哈希）
+- binding: object（migrated / plans / spaces / space_items / concepts / relations / events）
+
+错误码：`WEAK_PASSWORD`（密码强度不足）、`AUTH_USER_EXISTS`、`AUTH_DISPLAY_NAME_EXISTS`
+
+## POST /api/auth/login
+
+请求：
+- username / password
+- guest_user_id: string（可选）
+- adopt_guest_data: bool（可选，默认 false）
+
+说明：
+- 默认**不合并**访客数据，避免公共设备上的他人进度污染账号；
+  只有 `adopt_guest_data=true` 时才调用数据迁移。
+- 连续 5 次密码错误后账号锁定 10 分钟，返回 `429` + `AUTH_LOCKED`。
+
+## PUT /api/auth/profile
+
+修改当前账号资料，需 `Authorization: Bearer <token>`。
+
+请求（字段均可选）：
+- `display_name`：昵称，最长 24 字符
+- `bio`：个人简介，最长 500 字符（超长自动截断）
+- `locale`：`CN` | `EN`
+
+响应：`user`（公开字段）
+错误码：`AUTH_DISPLAY_NAME_EXISTS`（昵称与他人重复）、`AUTH_REQUIRED`
+
+## POST /api/auth/change-password
+
+需 `Authorization: Bearer <token>`。
+
+请求：`old_password`、`new_password`
+响应：`revoked_sessions`（本次被撤销的其他会话数）
+错误码：`AUTH_INVALID_CREDENTIALS`、`WEAK_PASSWORD`
+
+## POST /api/auth/recovery/issue
+
+需登录。响应 `recovery_code`（新码），旧码立即失效。
+
+## POST /api/auth/recovery/reset
+
+无需登录。
+请求：`username`、`recovery_code`、`new_password`
+响应：`revoked_sessions`、`recovery_code`（自动轮换）
+说明：账号不存在与恢复码错误统一返回 `RECOVERY_FAILED`，避免账号枚举。
+
+## GET /api/auth/sessions
+
+需登录。响应：
+- sessions: array
+  - session_id / created_at / last_seen_at / expires_at / current
+
+已撤销与已过期的会话不会返回。
+
+## POST /api/auth/sessions/revoke
+
+需登录。
+请求：`session_id`（退出指定设备）或 `all_others: true`（退出其他所有设备）
+响应：`revoked`（数量）
+错误码：`SESSION_NOT_FOUND`；退出当前设备需用 `/logout`，此接口返回 `INVALID_INPUT`。
+
+## POST /api/question_bank/practice-session
+
+保存一次完整练习的汇总（单题作答仍走 `/answer`）。
+
+请求：
+- user_id
+- session: object（id / title / concept / scope / difficulty / items / answers / elapsedSeconds / completedAt）
+
+响应：
+- session: object
+  - total_count / answered_count / correct_count
+  - accuracy: number（correct_count / total_count）
+  - elapsed_seconds / timestamp / concept / title
+
+## GET /api/question_bank/practice-sessions
+
+请求参数：`user_id`、可选 `limit`
+响应：`count`、`items`（时间倒序，最多 50 条）
+
+## GET /api/spaces/search
+
+跨空间搜索资料条目。
+
+请求参数：
+- `user_id`
+- `q`：关键词（必填，最长 60 字符）
+- `limit`：可选，1-50，默认 20
+
+响应：
+- `query` / `count`
+- `results`: array
+  - `space_id` / `space_name`
+  - `item_id` / `name` / `kind`
+  - `snippet`：命中位置前后约 160 字的片段
+  - `updated_at`
+
+说明：
+- 匹配范围为条目名称、摘要、正文前 4000 字与标签；
+- 不读取 `fileDataUrl`，避免把 base64 内容当作可搜索文本；
+- 关键词为空返回 `INVALID_INPUT`。

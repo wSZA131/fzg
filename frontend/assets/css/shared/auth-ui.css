@@ -41,6 +41,10 @@ body.auth-home-preview .global-sidebar-backdrop {
   z-index: 4;
 }
 
+.auth-top-slot[hidden] {
+  display: none !important;
+}
+
 .auth-top-slot-cluster,
 .auth-top-slot-dock {
   display: flex;
@@ -52,14 +56,45 @@ body.auth-home-preview .global-sidebar-backdrop {
   gap: 12px;
 }
 
+/* 页面左上角的连续登录徽章槽位（各页面头部第一个元素） */
+.page-streak-dock {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex: 0 0 auto;
+  align-self: flex-start;
+}
+
+/* 徽章后紧跟页面标题，避免 space-between 把标题推到中间 */
+.page-streak-dock + * {
+  margin-right: auto;
+}
+
+.chat-page-shell > .page-streak-dock {
+  margin-bottom: 12px;
+}
+
+/* 这些页面容器左边距较小，窄屏时给固定在左上的侧栏按钮让位 */
+@media (max-width: 1279px) {
+  .dash-header > .page-streak-dock {
+    padding-left: 46px;
+  }
+}
+
+@media (max-width: 980px) {
+  .topbar > .page-streak-dock {
+    padding-left: 46px;
+  }
+}
+
 .global-streak-widget {
   position: fixed;
   top: 18px;
-  right: 18px;
+  left: 18px;
   z-index: 1450;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 10px;
 }
 
@@ -67,6 +102,7 @@ body.auth-home-preview .global-sidebar-backdrop {
   position: relative;
   top: auto;
   right: auto;
+  left: auto;
   z-index: 4;
 }
 
@@ -115,7 +151,8 @@ body.auth-home-preview .global-sidebar-backdrop {
 .global-streak-popover {
   position: absolute;
   top: calc(100% + 10px);
-  right: 0;
+  left: 0;
+  right: auto;
   width: min(298px, calc(100vw - 24px));
   padding: 18px 18px 16px;
   border: 1px solid rgba(226, 232, 240, 0.92);
@@ -234,7 +271,7 @@ body.auth-home-preview .global-sidebar-backdrop {
 @media (max-width: 768px) {
   .global-streak-widget {
     top: 12px;
-    right: 12px;
+    left: 12px;
   }
 
   .global-streak-trigger {
@@ -1501,4 +1538,614 @@ body:not(.guest-home-layout) .global-sidebar {
   .auth-secondary-btn {
     min-height: 54px;
   }
+}
+
+/* ==========================================================
+   账号安全：密码可见切换 / 强度提示 / 恢复码 / 登录设备
+   ========================================================== */
+
+/* .auth-form 是 display:flex，会覆盖 hidden 属性，这里显式兜底 */
+.auth-form[hidden] {
+  display: none;
+}
+
+.auth-password-row {
+  position: relative;
+  display: flex;
+}
+
+.auth-password-row input {
+  padding-right: 60px;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  right: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.auth-password-toggle svg {
+  display: block;
+  width: 19px;
+  height: 19px;
+}
+
+.auth-password-toggle:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.auth-password-toggle:active {
+  background: #e2e8f0;
+}
+
+.auth-password-toggle:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.auth-strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth-strength[hidden] {
+  display: none;
+}
+
+/* 用 .auth-field 前缀提高特异性，避免被 .auth-field span 的粗体大字号覆盖 */
+.auth-field .auth-strength-track {
+  flex: 1 1 auto;
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: #eef2f7;
+  overflow: hidden;
+}
+
+.auth-strength-track i {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: #f59e0b;
+  transition: width 0.2s ease, background-color 0.2s ease;
+}
+
+.auth-strength-track i[data-level='2'] {
+  background: #10b981;
+}
+
+.auth-strength-track i[data-level='3'] {
+  background: #047857;
+}
+
+.auth-field .auth-strength-text {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 700;
+  color: #b45309;
+}
+
+.auth-field .auth-strength-text[data-ok='1'] {
+  color: #047857;
+}
+
+.auth-field.auth-remember {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.auth-field.auth-remember input {
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  flex: 0 0 20px;
+  padding: 0;
+  border-radius: 6px;
+  accent-color: #111111;
+}
+
+.auth-field.auth-remember span {
+  font-size: 14px;
+  font-weight: 600;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.auth-link-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -4px;
+}
+
+.auth-link-row[hidden] {
+  display: none;
+}
+
+.auth-link-btn {
+  padding: 4px 2px;
+  border: 0;
+  background: none;
+  color: #2563eb;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.auth-link-btn:hover {
+  text-decoration: underline;
+}
+
+.auth-recovery-code {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px dashed #c7d2e0;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.auth-recovery-code[hidden] {
+  display: none;
+}
+
+.auth-recovery-code-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.auth-recovery-code-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: #0f172a;
+  word-break: break-all;
+}
+
+.auth-recovery-code-copy {
+  align-self: flex-start;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid #d5deea;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0f172a;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-recovery-heading {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.auth-recovery-copy {
+  margin-top: -8px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #64748b;
+}
+
+.auth-settings-subsection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.auth-settings-subsection:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.auth-settings-subsection-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.auth-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-settings-hint {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #7b8798;
+}
+
+.auth-settings-textarea {
+  width: 100%;
+  min-height: 96px;
+  padding: 14px 16px;
+  border: 1px solid #d8e2ee;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #111827;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.auth-settings-textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.auth-settings-bio-meta {
+  align-self: flex-end;
+  font-size: 12.5px;
+  color: #94a3b8;
+}
+
+.auth-settings-hint.is-error {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.auth-settings-primary-btn,
+.auth-settings-secondary-btn {
+  min-height: 46px;
+  padding: 0 20px;
+  border-radius: 14px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.auth-settings-primary-btn {
+  width: 100%;
+  border: 0;
+  background: #111111;
+  color: #ffffff;
+}
+
+.auth-settings-primary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-settings-secondary-btn {
+  border: 1px solid #d5deea;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.auth-settings-secondary-btn.danger {
+  border-color: #f0d5d5;
+  color: #b91c1c;
+}
+
+.auth-device-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.auth-device-row:last-child {
+  border-bottom: 0;
+}
+
+.auth-device-main {
+  min-width: 0;
+}
+
+.auth-device-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.auth-device-meta {
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: #7b8798;
+}
+
+.auth-device-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+@media (max-width: 640px) {
+  .auth-password-toggle {
+    min-width: 54px;
+    padding: 0 10px;
+  }
+
+  .auth-recovery-code-value {
+    font-size: 18px;
+    letter-spacing: 0.12em;
+  }
+
+  .auth-device-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .auth-device-row .auth-settings-secondary-btn {
+    width: 100%;
+  }
+}
+
+/* ==========================================================
+   深色主题
+   ----------------------------------------------------------
+   各页面存在大量内联硬编码颜色，这里用属性选择器 + !important
+   统一覆盖主要容器、文字与表单控件，保证深色下可读。
+   局部细节（插画、渐变背景）仍沿用浅色资源。
+   ========================================================== */
+
+html[data-fangzhigong-theme='dark'] {
+  color-scheme: dark;
+}
+
+/* ---- 批量归一：把所有浅色面板统一压到深色底 ----
+   逐个手写成本过高（187 个白底类），这里用同一组选择器把容器刷成深色，
+   再用后代选择器统一文字色，保证对比度；强调色随后单独恢复。 */
+html[data-fangzhigong-theme='dark'] .app-container, .attachment-card, .auth-account-card, .auth-modal-panel, .auth-recovery-code-copy, .auth-secondary-btn,
+html[data-fangzhigong-theme='dark'] .auth-settings-delete-btn, .auth-settings-hero-btn, .auth-settings-panel, .auth-settings-secondary-btn, .avatar, .back-link,
+html[data-fangzhigong-theme='dark'] .capability-chart-card, .card, .card-disclosure, .card-disclosure-arrow, .chat-section, .chat-stage,
+html[data-fangzhigong-theme='dark'] .chat-status, .chat-user-badge, .clear-chat-btn, .composer-attachment-item, .composer-card, .container,
+html[data-fangzhigong-theme='dark'] .content-file, .content-footer-btn, .content-hub, .content-input, .content-modal-card, .content-mode-card,
+html[data-fangzhigong-theme='dark'] .content-record-btn, .content-record-controls, .content-textarea, .conversation-item, .dash-chart-card, .dash-chip,
+html[data-fangzhigong-theme='dark'] .dash-launcher, .dash-summary, .dashboard-drawer, .dashboard-drawer-body, .dashboard-drawer-header, .dashboard-drawer-shell,
+html[data-fangzhigong-theme='dark'] .entry-action-btn, .entry-action-card, .entry-action-close, .entry-action-file, .entry-action-input, .entry-action-space-box,
+html[data-fangzhigong-theme='dark'] .entry-action-space-menu, .entry-action-space-option, .entry-action-textarea, .entry-example-chip, .entry-explore-card, .entry-explore-filter,
+html[data-fangzhigong-theme='dark'] .entry-explore-refresh, .entry-explore-skeleton, .entry-gateway, .entry-input-wrap, .entry-plan-add-card, .entry-plan-board,
+html[data-fangzhigong-theme='dark'] .entry-plan-chip, .entry-plan-drawer, .entry-plan-drawer-body, .entry-plan-drawer-head, .entry-plan-note, .entry-plan-reminders,
+html[data-fangzhigong-theme='dark'] .entry-recent-item, .entry-record-btn, .entry-record-controls, .entry-space-card-main, .entry-space-empty, .entry-space-menu,
+html[data-fangzhigong-theme='dark'] .entry-space-sort-menu, .entry-spaces, .entry-tool, .entry-tools, .global-sidebar, .global-sidebar-collapse,
+html[data-fangzhigong-theme='dark'] .global-sidebar-space-menu, .global-sidebar-toggle, .global-sidebar-tool-key, .hero-drawer-launcher, .hero-drawer-launcher-arrow, .hero-kicker,
+html[data-fangzhigong-theme='dark'] .hero-metric, .hero-pill, .hub-card, .item-menu, .item-preview-body, .item-preview-card,
+html[data-fangzhigong-theme='dark'] .item-properties-card, .kb-mode-select-wrap, .message-action-btn, .message-bubble, .mini-stack-item, .navbar,
+html[data-fangzhigong-theme='dark'] .practice-ghost-btn, .practice-icon-btn, .practice-material-chip, .practice-option, .practice-question-panel, .practice-result-card,
+html[data-fangzhigong-theme='dark'] .practice-review-item, .practice-setup-card, .practice-sheet, .practice-sheet-cell, .practice-sheet-close, .question-bank-close-btn,
+html[data-fangzhigong-theme='dark'] .question-bank-counter, .question-bank-editor, .question-bank-editor-actions, .question-bank-ghost-btn, .question-bank-input, .question-bank-item,
+html[data-fangzhigong-theme='dark'] .question-bank-mini-tag, .question-bank-modal-card, .question-bank-modal-head, .question-bank-modal-status, .question-bank-select, .question-bank-select-field,
+html[data-fangzhigong-theme='dark'] .question-bank-textarea, .question-bank-toolbar-input, .question-bank-visibility, .rename-chat-btn, .review-card, .review-reminder-empty,
+html[data-fangzhigong-theme='dark'] .review-reminder-error, .review-reminder-item, .review-reminder-loading, .shell-modal-panel, .shell-result-icon, .sidebar-conversation-item,
+html[data-fangzhigong-theme='dark'] .sidebar-conversation-menu, .space-item-btn, .space-item-card, .space-item-input, .space-item-textarea, .space-more-btn,
+html[data-fangzhigong-theme='dark'] .space-more-menu, .space-reader-back, .space-reader-document, .space-reader-frame, .space-reader-media, .space-reader-pdf-page,
+html[data-fangzhigong-theme='dark'] .space-search-panel, .space-search-result, .space-search-trigger, .study-launcher, .study-panel, .study-panel-body,
+html[data-fangzhigong-theme='dark'] .study-panel-frame, .study-panel-head, .task-card, .task-modal-card, .topbar, .upload-analyze-btn,
+html[data-fangzhigong-theme='dark'] .upload-btn {
+  background: #171b23 !important;
+  background-image: none !important;
+  border-color: #262c38 !important;
+  color: #e7e9ee !important;
+}
+
+html[data-fangzhigong-theme='dark'] .app-container, .attachment-card, .auth-account-card, .auth-modal-panel, .auth-recovery-code-copy, .auth-secondary-btn,
+html[data-fangzhigong-theme='dark'] .auth-settings-delete-btn, .auth-settings-hero-btn, .auth-settings-panel, .auth-settings-secondary-btn, .avatar, .back-link,
+html[data-fangzhigong-theme='dark'] .capability-chart-card, .card, .card-disclosure, .card-disclosure-arrow, .chat-section, .chat-stage,
+html[data-fangzhigong-theme='dark'] .chat-status, .chat-user-badge, .clear-chat-btn, .composer-attachment-item, .composer-card, .container,
+html[data-fangzhigong-theme='dark'] .content-file, .content-footer-btn, .content-hub, .content-input, .content-modal-card, .content-mode-card,
+html[data-fangzhigong-theme='dark'] .content-record-btn, .content-record-controls, .content-textarea, .conversation-item, .dash-chart-card, .dash-chip,
+html[data-fangzhigong-theme='dark'] .dash-launcher, .dash-summary, .dashboard-drawer, .dashboard-drawer-body, .dashboard-drawer-header, .dashboard-drawer-shell,
+html[data-fangzhigong-theme='dark'] .entry-action-btn, .entry-action-card, .entry-action-close, .entry-action-file, .entry-action-input, .entry-action-space-box,
+html[data-fangzhigong-theme='dark'] .entry-action-space-menu, .entry-action-space-option, .entry-action-textarea, .entry-example-chip, .entry-explore-card, .entry-explore-filter,
+html[data-fangzhigong-theme='dark'] .entry-explore-refresh, .entry-explore-skeleton, .entry-gateway, .entry-input-wrap, .entry-plan-add-card, .entry-plan-board,
+html[data-fangzhigong-theme='dark'] .entry-plan-chip, .entry-plan-drawer, .entry-plan-drawer-body, .entry-plan-drawer-head, .entry-plan-note, .entry-plan-reminders,
+html[data-fangzhigong-theme='dark'] .entry-recent-item, .entry-record-btn, .entry-record-controls, .entry-space-card-main, .entry-space-empty, .entry-space-menu,
+html[data-fangzhigong-theme='dark'] .entry-space-sort-menu, .entry-spaces, .entry-tool, .entry-tools, .global-sidebar, .global-sidebar-collapse,
+html[data-fangzhigong-theme='dark'] .global-sidebar-space-menu, .global-sidebar-toggle, .global-sidebar-tool-key, .hero-drawer-launcher, .hero-drawer-launcher-arrow, .hero-kicker,
+html[data-fangzhigong-theme='dark'] .hero-metric, .hero-pill, .hub-card, .item-menu, .item-preview-body, .item-preview-card,
+html[data-fangzhigong-theme='dark'] .item-properties-card, .kb-mode-select-wrap, .message-action-btn, .message-bubble, .mini-stack-item, .navbar,
+html[data-fangzhigong-theme='dark'] .practice-ghost-btn, .practice-icon-btn, .practice-material-chip, .practice-option, .practice-question-panel, .practice-result-card,
+html[data-fangzhigong-theme='dark'] .practice-review-item, .practice-setup-card, .practice-sheet, .practice-sheet-cell, .practice-sheet-close, .question-bank-close-btn,
+html[data-fangzhigong-theme='dark'] .question-bank-counter, .question-bank-editor, .question-bank-editor-actions, .question-bank-ghost-btn, .question-bank-input, .question-bank-item,
+html[data-fangzhigong-theme='dark'] .question-bank-mini-tag, .question-bank-modal-card, .question-bank-modal-head, .question-bank-modal-status, .question-bank-select, .question-bank-select-field,
+html[data-fangzhigong-theme='dark'] .question-bank-textarea, .question-bank-toolbar-input, .question-bank-visibility, .rename-chat-btn, .review-card, .review-reminder-empty,
+html[data-fangzhigong-theme='dark'] .review-reminder-error, .review-reminder-item, .review-reminder-loading, .shell-modal-panel, .shell-result-icon, .sidebar-conversation-item,
+html[data-fangzhigong-theme='dark'] .sidebar-conversation-menu, .space-item-btn, .space-item-card, .space-item-input, .space-item-textarea, .space-more-btn,
+html[data-fangzhigong-theme='dark'] .space-more-menu, .space-reader-back, .space-reader-document, .space-reader-frame, .space-reader-media, .space-reader-pdf-page,
+html[data-fangzhigong-theme='dark'] .space-search-panel, .space-search-result, .space-search-trigger, .study-launcher, .study-panel, .study-panel-body,
+html[data-fangzhigong-theme='dark'] .study-panel-frame, .study-panel-head, .task-card, .task-modal-card, .topbar, .upload-analyze-btn,
+html[data-fangzhigong-theme='dark'] .upload-btn :is(h1, h2, h3, h4, h5, p, span, div, li, label, strong, em, small, dt, dd, td, th) {
+  color: inherit;
+}
+
+html[data-fangzhigong-theme='dark'] body {
+  background: #0f1115 !important;
+  color: #e7e9ee !important;
+}
+
+html[data-fangzhigong-theme='dark'] .navbar,
+html[data-fangzhigong-theme='dark'] .space-shell-topbar,
+html[data-fangzhigong-theme='dark'] .space-reader-topbar {
+  background: rgba(17, 20, 26, 0.92) !important;
+  border-color: #232833 !important;
+  color: #e7e9ee !important;
+}
+
+html[data-fangzhigong-theme='dark'] .global-sidebar {
+  background: #14171e !important;
+  border-color: #232833 !important;
+  box-shadow: 12px 0 26px rgba(0, 0, 0, 0.4) !important;
+}
+
+html[data-fangzhigong-theme='dark'] .global-sidebar-link,
+html[data-fangzhigong-theme='dark'] .global-sidebar-logo,
+html[data-fangzhigong-theme='dark'] .global-sidebar-section {
+  color: #c8ccd6 !important;
+  border-color: #232833 !important;
+}
+
+html[data-fangzhigong-theme='dark'] .global-sidebar-link:hover,
+html[data-fangzhigong-theme='dark'] .global-sidebar-link.active {
+  background: #1d222b !important;
+  color: #ffffff !important;
+}
+
+html[data-fangzhigong-theme='dark'] .card,
+html[data-fangzhigong-theme='dark'] .panel,
+html[data-fangzhigong-theme='dark'] .auth-modal-panel,
+html[data-fangzhigong-theme='dark'] .auth-settings-panel,
+html[data-fangzhigong-theme='dark'] .auth-user-menu-card,
+html[data-fangzhigong-theme='dark'] .space-search-panel,
+html[data-fangzhigong-theme='dark'] .shell-modal-panel,
+html[data-fangzhigong-theme='dark'] .insight-box {
+  background: #171b23 !important;
+  border-color: #262c38 !important;
+  color: #e7e9ee !important;
+}
+
+html[data-fangzhigong-theme='dark'] .auth-modal-title,
+html[data-fangzhigong-theme='dark'] .auth-settings-title,
+html[data-fangzhigong-theme='dark'] .auth-settings-subsection-title,
+html[data-fangzhigong-theme='dark'] .auth-device-title,
+html[data-fangzhigong-theme='dark'] .auth-field span,
+html[data-fangzhigong-theme='dark'] .auth-settings-row-label,
+html[data-fangzhigong-theme='dark'] .space-search-title,
+html[data-fangzhigong-theme='dark'] .space-search-result-title,
+html[data-fangzhigong-theme='dark'] .space-reader-file {
+  color: #e7e9ee !important;
+}
+
+html[data-fangzhigong-theme='dark'] .auth-modal-subtitle,
+html[data-fangzhigong-theme='dark'] .auth-settings-hint,
+html[data-fangzhigong-theme='dark'] .auth-settings-row-value,
+html[data-fangzhigong-theme='dark'] .auth-device-meta,
+html[data-fangzhigong-theme='dark'] .auth-tip,
+html[data-fangzhigong-theme='dark'] .auth-recovery-copy,
+html[data-fangzhigong-theme='dark'] .space-search-result-snippet,
+html[data-fangzhigong-theme='dark'] .space-search-result-meta,
+html[data-fangzhigong-theme='dark'] .space-search-status {
+  color: #98a1b0 !important;
+}
+
+html[data-fangzhigong-theme='dark'] input,
+html[data-fangzhigong-theme='dark'] textarea,
+html[data-fangzhigong-theme='dark'] select {
+  background: #101419 !important;
+  border-color: #2b323e !important;
+  color: #e7e9ee !important;
+}
+
+html[data-fangzhigong-theme='dark'] input::placeholder,
+html[data-fangzhigong-theme='dark'] textarea::placeholder {
+  color: #6b7484 !important;
+}
+
+html[data-fangzhigong-theme='dark'] .message-row.assistant .message-bubble,
+html[data-fangzhigong-theme='dark'] .space-search-result {
+  background: #171b23 !important;
+  border-color: #262c38 !important;
+  color: #e7e9ee !important;
+}
+
+html[data-fangzhigong-theme='dark'] .space-search-result:hover {
+  background: #1d222b !important;
+}
+
+html[data-fangzhigong-theme='dark'] .message-action-btn,
+html[data-fangzhigong-theme='dark'] .auth-settings-secondary-btn,
+html[data-fangzhigong-theme='dark'] .auth-tab,
+html[data-fangzhigong-theme='dark'] .space-search-trigger,
+html[data-fangzhigong-theme='dark'] .space-reader-back {
+  background: #1b202a !important;
+  border-color: #2b323e !important;
+  color: #cfd4de !important;
+}
+
+/* 主按钮在深色下反相，保持对比度 */
+html[data-fangzhigong-theme='dark'] .auth-submit-btn,
+html[data-fangzhigong-theme='dark'] .auth-settings-primary-btn,
+html[data-fangzhigong-theme='dark'] .space-search-submit {
+  background: #e7e9ee !important;
+  color: #11151b !important;
+}
+
+html[data-fangzhigong-theme='dark'] .auth-tab.active {
+  background: #262c38 !important;
+  color: #ffffff !important;
+}
+
+html[data-fangzhigong-theme='dark'] .auth-recovery-code {
+  background: #101419 !important;
+  border-color: #2b323e !important;
+}
+
+html[data-fangzhigong-theme='dark'] .auth-recovery-code-value {
+  color: #e7e9ee !important;
+}
+
+html[data-fangzhigong-theme='dark'] .auth-settings-nav-btn {
+  color: #9aa3b2 !important;
+}
+
+html[data-fangzhigong-theme='dark'] .auth-settings-nav-btn.active {
+  background: #262c38 !important;
+  color: #ffffff !important;
+}
+
+html[data-fangzhigong-theme='dark'] .auth-settings-row,
+html[data-fangzhigong-theme='dark'] .auth-settings-subsection,
+html[data-fangzhigong-theme='dark'] .auth-device-row {
+  border-color: #232833 !important;
+}
+
+html[data-fangzhigong-theme='dark'] body.has-mobile-tabbar .mobile-tabbar {
+  background: rgba(17, 20, 26, 0.94) !important;
+  border-color: #232833 !important;
+}
+
+html[data-fangzhigong-theme='dark'] .mobile-tabbar-item {
+  color: #8f98a8 !important;
+}
+
+html[data-fangzhigong-theme='dark'] .mobile-tabbar-item.active {
+  color: #ffffff !important;
+}
+
+html[data-fangzhigong-theme='dark'] .space-search-layer,
+html[data-fangzhigong-theme='dark'] .auth-modal,
+html[data-fangzhigong-theme='dark'] .auth-settings-modal {
+  background: rgba(0, 0, 0, 0.62) !important;
 }

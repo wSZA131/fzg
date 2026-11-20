@@ -1,10 +1,30 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script>
+        /* 主题需在首屏渲染前生效，避免深色模式闪白 */
+        (function () {
+            try {
+                if (window.localStorage.getItem('fangzhigong_theme_pref') === 'dark') {
+                    document.documentElement.setAttribute('data-fangzhigong-theme', 'dark');
+                    document.documentElement.style.colorScheme = 'dark';
+                }
+            } catch (error) { /* 隐私模式下 localStorage 不可用 */ }
+        })();
+    </script>
+
     <link rel="icon" type="image/svg+xml" href="assets/images/app-icon.svg">
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="坊知工">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="assets/images/app-icon-192.png">
+    <link rel="stylesheet" href="assets/css/shared/mobile-shell.css?v=20261118-mobile-v1">
     <title>学习仪表盘 - 智能学习伴侣</title>
-    <link rel="stylesheet" href="assets/css/shared/auth-ui.css?v=20260512-auth-modal-scrollbarhide-v3">
+    <link rel="stylesheet" href="assets/css/shared/auth-ui.css?v=20261119-auth-v4">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -1834,7 +1854,7 @@
             }
         }
     </style>
-    <link rel="stylesheet" href="assets/css/shared/site-theme.css?v=20261114-docked-panel-v1">
+    <link rel="stylesheet" href="assets/css/shared/site-theme.css?v=20261115-knowledge-v1">
     <link rel="stylesheet" href="assets/css/pages/dashboard-board.css?v=20261113-profile-radar-v1">
 </head>
 <body class="dashboard-page">
@@ -1854,6 +1874,7 @@
 
     <div class="dashboard-container">
         <header class="dash-header">
+            <div class="page-streak-dock" id="globalStreakDock"></div>
             <div class="dash-header-main">
                 <h1 class="dash-title">学习仪表盘</h1>
                 <p class="dash-subtitle">多源学习数据 · 知识图谱 · 认知诊断的实时汇总</p>
@@ -2167,14 +2188,15 @@
         </div>
     </aside>
 
-    <script src="assets/js/shared/user-context.js?v=20260330-authfix"></script>
+    <script src="assets/js/shared/user-context.js?v=20261119-auth-v4"></script>
     <script src="assets/js/shared/api-utils.js?v=20260511-auth-dup-check"></script>
     <script src="assets/js/shared/project-local-data.js?v=20260330-authfix"></script>
-    <script src="assets/js/shared/space-cloud-store.js?v=20260403-sidebarspaces"></script>
-    <script src="assets/js/shared/auth-ui.js?v=20260512-auth-register-autofill-fix"></script>
-    <script src="assets/js/shared/page-shell.js?v=20261113-graph-merge"></script>
+    <script src="assets/js/shared/space-cloud-store.js?v=20261118-search-v1"></script>
+    <script src="assets/js/shared/i18n.js?v=20261119-i18n-v2"></script>
+    <script src="assets/js/shared/auth-ui.js?v=20261119-auth-v4"></script>
+    <script src="assets/js/shared/page-shell.js?v=20261118-mobile-v1"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
-    <script src="assets/js/pages/dashboard-page.js?v=20261114-docked-panel-v1"></script>
+    <script src="assets/js/pages/dashboard-page.js?v=20261115-knowledge-v1"></script>
 </body>
 </html>

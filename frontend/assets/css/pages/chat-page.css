@@ -1442,3 +1442,5 @@ html.chat-embed-root .composer-wrap {
   position: relative !important;
   bottom: auto !important;
 }
+
+/* 朗读按钮样式见 assets/css/shared/speech.css（问答 / 空间预览 / 知识点详情共用） */

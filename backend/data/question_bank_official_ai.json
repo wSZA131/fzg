@@ -217,7 +217,120 @@
       "created_by": "official_ai",
       "is_public": true,
       "bank_source": "official_ai"
+    },
+    {
+      "id": "qb-ai-fallback-b48bb03822c7",
+      "concept": "导数",
+      "difficulty": "medium",
+      "question_type": "short_answer",
+      "question": "请用自己的话解释“导数”的核心定义，并给出一个应用场景。",
+      "options": [],
+      "answer": "应包含该知识点的定义关键词、适用条件，并给出一个具体例子。",
+      "analysis": "可按“定义-条件-例子”三步作答。",
+      "created_at": "2026-11-16T10:23:05.357353",
+      "created_by": "official_ai",
+      "is_public": true,
+      "bank_source": "official_ai"
+    },
+    {
+      "id": "qb-material-db639d86eef2",
+      "concept": "Answer the questions by ma…",
+      "difficulty": "medium",
+      "question_type": "single_choice",
+      "question": "根据学习资料，关于「Eachstatement contains i...」的表述，正确的是（ ）",
+      "options": [
+        "A. Eachstatement contains information given in one of the paragraphs.",
+        "B. Identify the paragraphfrom n which the information is derive...",
+        "C. You may choose aparagraph more than once.",
+        "D. Each paragraph is marked with a letter."
+      ],
+      "answer": "A",
+      "analysis": "资料原文：Eachstatement contains information given in one of the paragraphs.",
+      "created_at": "2026-11-18T17:17:37.798605",
+      "created_by": "official_ai",
+      "is_public": true,
+      "bank_source": "official_ai"
+    },
+    {
+      "id": "qb-material-16120ffd1a86",
+      "concept": "Answer the questions by ma…",
+      "difficulty": "medium",
+      "question_type": "short_answer",
+      "question": "请结合学习资料解释「Identify the paragraphfr...」，并说明它在资料中的作用。",
+      "options": [],
+      "answer": "Identify the paragraphfrom n which the information is derived.",
+      "analysis": "作答时应覆盖资料中的关键表述：Identify the paragraphfrom n which the information is derived.",
+      "created_at": "2026-11-18T17:17:37.798629",
+      "created_by": "official_ai",
+      "is_public": true,
+      "bank_source": "official_ai"
+    },
+    {
+      "id": "qb-material-26a7497ea897",
+      "concept": "Answer the questions by ma…",
+      "difficulty": "medium",
+      "question_type": "single_choice",
+      "question": "根据学习资料，关于「You may choose aparagrap...」的表述，正确的是（ ）",
+      "options": [
+        "A. You may choose aparagraph more than once.",
+        "B. Eachstatement contains information given in one of the parag...",
+        "C. Identify the paragraphfrom n which the information is derive...",
+        "D. Each paragraph is marked with a letter."
+      ],
+      "answer": "A",
+      "analysis": "资料原文：You may choose aparagraph more than once.",
+      "created_at": "2026-11-18T17:17:37.798646",
+      "created_by": "official_ai",
+      "is_public": true,
+      "bank_source": "official_ai"
+    },
+    {
+      "id": "qb-material-95b1cfdb5bbb",
+      "concept": "Answer the questions by ma…",
+      "difficulty": "medium",
+      "question_type": "short_answer",
+      "question": "请结合学习资料解释「Each paragraph is marked...」，并说明它在资料中的作用。",
+      "options": [],
+      "answer": "Each paragraph is marked with a letter.",
+      "analysis": "作答时应覆盖资料中的关键表述：Each paragraph is marked with a letter.",
+      "created_at": "2026-11-18T17:17:37.798655",
+      "created_by": "official_ai",
+      "is_public": true,
+      "bank_source": "official_ai"
+    },
+    {
+      "id": "qb-material-95588c0e59b3",
+      "concept": "Answer the questions by ma…",
+      "difficulty": "medium",
+      "question_type": "single_choice",
+      "question": "根据学习资料，关于「Answer the questions by ...」的表述，正确的是（ ）",
+      "options": [
+        "A. Answer the questions by marking the corresponding letter on Answer Sheet 2.",
+        "B. Eachstatement contains information given in one of the parag...",
+        "C. Identify the paragraphfrom n which the information is derive...",
+        "D. You may choose aparagraph more than once."
+      ],
+      "answer": "A",
+      "analysis": "资料原文：Answer the questions by marking the corresponding letter on Answer Sheet 2.",
+      "created_at": "2026-11-18T17:17:37.798702",
+      "created_by": "official_ai",
+      "is_public": true,
+      "bank_source": "official_ai"
+    },
+    {
+      "id": "qb-ai-fallback-a09cdaf1dca7",
+      "concept": "Answer the questions by ma…",
+      "difficulty": "medium",
+      "question_type": "short_answer",
+      "question": "请用自己的话解释“Answer the questions by ma…”的核心定义，并给出一个应用场景。",
+      "options": [],
+      "answer": "应包含该知识点的定义关键词、适用条件，并给出一个具体例子。",
+      "analysis": "可按“定义-条件-例子”三步作答。",
+      "created_at": "2026-11-18T17:17:38.000553",
+      "created_by": "official_ai",
+      "is_public": true,
+      "bank_source": "official_ai"
     }
   ],
-  "updated_at": "2026-11-15T11:35:05.024797"
+  "updated_at": "2026-11-18T17:17:38.153880"
 }

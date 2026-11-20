@@ -1,14 +1,34 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script>
+        /* 主题需在首屏渲染前生效，避免深色模式闪白 */
+        (function () {
+            try {
+                if (window.localStorage.getItem('fangzhigong_theme_pref') === 'dark') {
+                    document.documentElement.setAttribute('data-fangzhigong-theme', 'dark');
+                    document.documentElement.style.colorScheme = 'dark';
+                }
+            } catch (error) { /* 隐私模式下 localStorage 不可用 */ }
+        })();
+    </script>
+
     <link rel="icon" type="image/svg+xml" href="assets/images/app-icon.svg">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="坊知工">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="assets/images/app-icon-192.png">
+    <link rel="stylesheet" href="assets/css/shared/mobile-shell.css?v=20261118-mobile-v1">
     <title>我的空间</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/shared/auth-ui.css?v=20260512-auth-modal-scrollbarhide-v3">
+    <link rel="stylesheet" href="assets/css/shared/auth-ui.css?v=20261119-auth-v4">
+    <link rel="stylesheet" href="assets/css/shared/speech.css?v=20261118-speech-v1">
     <link rel="stylesheet" href="assets/css/shared/study-drawer.css?v=20261113-study-drawer-v2">
     <style>
         :root {
@@ -283,6 +303,11 @@
             font-weight: 800;
             cursor: pointer;
             box-shadow: var(--shadow-sm);
+            flex-shrink: 0;
+        }
+
+        .space-reader-topbar .space-reader-speak {
+            margin-left: auto;
             flex-shrink: 0;
         }
 
@@ -1361,8 +1386,211 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* ---------- 空间内搜索 ---------- */
+        .space-search-trigger {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 40px;
+            padding: 0 16px;
+            border: 1px solid #dbe4ef;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #334155;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .space-search-trigger:hover {
+            border-color: #c3d3e6;
+            color: #0f172a;
+        }
+
+        .space-search-trigger svg {
+            width: 17px;
+            height: 17px;
+            flex: 0 0 17px;
+        }
+
+        .space-search-layer {
+            position: fixed;
+            inset: 0;
+            z-index: 2100;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 88px 18px 24px;
+            background: rgba(15, 23, 42, 0.38);
+        }
+
+        .space-search-layer[hidden] {
+            display: none;
+        }
+
+        .space-search-panel {
+            width: min(680px, 100%);
+            max-height: calc(100vh - 130px);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding: 22px;
+            border-radius: 22px;
+            background: #ffffff;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+        }
+
+        .space-search-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .space-search-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .space-search-close {
+            width: 36px;
+            height: 36px;
+            border: 0;
+            border-radius: 10px;
+            background: #f1f5f9;
+            color: #475569;
+            font-size: 20px;
+            line-height: 1;
+            cursor: pointer;
+        }
+
+        .space-search-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .space-search-form input {
+            flex: 1 1 auto;
+            min-width: 0;
+            min-height: 48px;
+            padding: 0 16px;
+            border: 1px solid #d8e2ee;
+            border-radius: 14px;
+            background: #ffffff;
+            color: #111827;
+            font-family: inherit;
+            font-size: 15px;
+        }
+
+        .space-search-form input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+        }
+
+        .space-search-submit {
+            flex: 0 0 auto;
+            min-height: 48px;
+            padding: 0 22px;
+            border: 0;
+            border-radius: 14px;
+            background: #111111;
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .space-search-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .space-search-status {
+            font-size: 13px;
+            color: #7b8798;
+        }
+
+        .space-search-status.is-error {
+            color: #b91c1c;
+            font-weight: 700;
+        }
+
+        .space-search-status[hidden] {
+            display: none;
+        }
+
+        .space-search-results {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+        }
+
+        .space-search-result {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            padding: 13px 15px;
+            border: 1px solid #eef2f7;
+            border-radius: 14px;
+            background: #ffffff;
+            text-align: left;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .space-search-result:hover {
+            border-color: #c3d3e6;
+            background: #f8fafc;
+        }
+
+        .space-search-result-title {
+            font-size: 14.5px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .space-search-result-snippet {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #64748b;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .space-search-result-meta {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        @media (max-width: 640px) {
+            .space-search-layer {
+                padding: 72px 12px 16px;
+            }
+
+            .space-search-panel {
+                max-height: calc(100vh - 96px);
+                padding: 18px;
+            }
+
+            .space-search-trigger span {
+                display: none;
+            }
+
+            .space-search-trigger {
+                padding: 0 12px;
+            }
+        }
     </style>
-    <link rel="stylesheet" href="assets/css/shared/site-theme.css?v=20261113-brand-icon-v2">
+    <link rel="stylesheet" href="assets/css/shared/site-theme.css?v=20261115-knowledge-v1">
 </head>
 <body>
     <button class="global-sidebar-toggle" id="globalSidebarToggle" type="button" aria-label="打开侧栏">
@@ -1386,6 +1614,7 @@
     </aside>
 
     <header class="space-shell-topbar">
+        <div class="page-streak-dock" id="globalStreakDock"></div>
         <div class="space-shell-brand">
             <div class="space-brand-mark" aria-hidden="true">
                 <span></span>
@@ -1398,6 +1627,13 @@
             </div>
         </div>
         <div class="space-shell-actions">
+            <button class="space-search-trigger" id="spaceSearchBtn" type="button" aria-haspopup="dialog" aria-controls="spaceSearchLayer" aria-expanded="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="6.5"></circle>
+                    <path d="m16 16 4.5 4.5"></path>
+                </svg>
+                <span>搜索</span>
+            </button>
             <button class="study-launcher" id="studyLauncherBtn" type="button" aria-haspopup="dialog" aria-controls="studyDrawer" aria-expanded="false">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5V5.5Z"></path>
@@ -1405,10 +1641,24 @@
                 </svg>
                 <span>学习</span>
             </button>
-            <div class="space-streak-dock" id="globalStreakDock"></div>
             <div class="space-shell-user" id="spaceUserLabel">用户：-</div>
         </div>
     </header>
+
+    <div class="space-search-layer" id="spaceSearchLayer" hidden>
+        <div class="space-search-panel" role="dialog" aria-modal="true" aria-labelledby="spaceSearchTitle">
+            <div class="space-search-head">
+                <div class="space-search-title" id="spaceSearchTitle">搜索空间资料</div>
+                <button type="button" class="space-search-close" id="spaceSearchClose" aria-label="关闭搜索">×</button>
+            </div>
+            <form class="space-search-form" id="spaceSearchForm">
+                <input id="spaceSearchInput" type="search" placeholder="输入标题、摘要或正文关键词" autocomplete="off" spellcheck="false">
+                <button type="submit" class="space-search-submit" id="spaceSearchSubmit">搜索</button>
+            </form>
+            <div class="space-search-status" id="spaceSearchStatus" aria-live="polite"></div>
+            <div class="space-search-results" id="spaceSearchResults"></div>
+        </div>
+    </div>
 
     <main class="space-page" id="spacePage">
         <section class="space-hero" id="spaceHero">
@@ -1458,6 +1708,12 @@
         <div class="space-reader-topbar">
             <button class="space-reader-back" id="spaceReaderBackBtn" type="button">返回空间</button>
             <div class="space-reader-file" id="spaceReaderFileName">文档预览</div>
+            <button class="message-action-btn space-reader-speak" id="spaceReaderSpeakBtn" type="button"
+                    data-speak-toggle data-speak-source="#spaceReaderBody"
+                    aria-pressed="false" aria-label="朗读这份资料">
+                <span class="message-action-icon" aria-hidden="true">▶</span>
+                <span class="message-action-label">朗读</span>
+            </button>
         </div>
         <section class="space-reader-body" id="spaceReaderBody"></section>
     </main>
@@ -1560,13 +1816,15 @@
         </div>
     </div>
 
-    <script src="assets/js/shared/user-context.js?v=20260330-authfix"></script>
+    <script src="assets/js/shared/user-context.js?v=20261119-auth-v4"></script>
     <script src="assets/js/shared/api-utils.js?v=20260511-auth-dup-check"></script>
     <script src="assets/js/shared/project-local-data.js?v=20260330-authfix"></script>
-    <script src="assets/js/shared/space-cloud-store.js?v=20260403-sidebarspaces"></script>
-    <script src="assets/js/shared/auth-ui.js?v=20260512-auth-register-autofill-fix"></script>
-    <script src="assets/js/shared/page-shell.js?v=20261113-graph-merge"></script>
+    <script src="assets/js/shared/space-cloud-store.js?v=20261118-search-v1"></script>
+    <script src="assets/js/shared/i18n.js?v=20261119-i18n-v2"></script>
+    <script src="assets/js/shared/auth-ui.js?v=20261119-auth-v4"></script>
+    <script src="assets/js/shared/page-shell.js?v=20261118-mobile-v1"></script>
+    <script src="assets/js/shared/speech-player.js?v=20261118-speech-v1"></script>
     <script src="assets/js/shared/study-drawer.js?v=20261113-study-drawer-v3"></script>
-    <script src="assets/js/pages/spaces-page.js?v=20260416-recorderfix"></script>
+    <script src="assets/js/pages/spaces-page.js?v=20261118-search-v1"></script>
 </body>
 </html>

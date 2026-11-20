@@ -13,7 +13,14 @@
 - 部署编排：[deploy/docker-compose.yml](../deploy/docker-compose.yml)、[deploy/Dockerfile](../deploy/Dockerfile)
 - 冒烟检查：[deploy/healthcheck.sh](../deploy/healthcheck.sh)
 
+## 开发工具
+
+- [CodeArts 代码智能体使用指南](CODEARTS_SKILLS_GUIDE.md)：赛题必选工具的开通、Skills 安装、
+  云资源开通提示词与证据留存清单
+
 ## 评测与基准
+
+- [评测口径与复现指南](EVAL_GUIDE.md)：三份报告的差异、每个指标的含义、报告有效性判定（先看 `meta`）、复现命令
 
 数据文件位于 `backend/docs/`：
 
@@ -21,6 +28,7 @@
 - `graph_availability_report.json`：图谱可用性评测（连通率、上下文命中率）
 - `agent_eval_report.json`：端到端智能体评测（工具轨迹）
 - 复现脚本：`backend/scripts/eval_hybrid_retrieval.py`、`backend/scripts/eval_graph_availability.py`、`backend/scripts/run_agent_eval.py`
+- 制品自检：`backend/scripts/verify_kb_artifacts.py`
 
 ## 其他
 

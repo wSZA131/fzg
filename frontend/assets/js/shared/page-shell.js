@@ -731,43 +731,13 @@
     return root;
   }
 
-  function getStreakWidgetConflictAnchor() {
-    const selectors = [
-      '#authTopSlot',
-      '.dashboard-actions',
-      '.topbar .links',
-      '#spaceUserLabel',
-      '.space-reader-topbar'
-    ];
-
-    for (let index = 0; index < selectors.length; index += 1) {
-      const node = document.querySelector(selectors[index]);
-      if (!node) continue;
-      const rect = node.getBoundingClientRect();
-      if (rect.width <= 0 || rect.height <= 0) continue;
-      if (rect.bottom <= 0 || rect.top >= Math.min(window.innerHeight, 180)) continue;
-      return node;
-    }
-
-    return null;
-  }
-
   function syncStreakWidgetOffset() {
+    // 徽章固定在各页面头部左上角的 #globalStreakDock 中，不再按页面冲突元素下移。
     const root = document.getElementById('globalStreakWidget');
     if (!root) return;
-    if (root.classList.contains('is-inline-anchor')) {
-      root.style.top = '';
-      return;
-    }
-
-    let topOffset = window.innerWidth <= 768 ? 12 : 18;
-    const anchor = getStreakWidgetConflictAnchor();
-    if (anchor) {
-      const rect = anchor.getBoundingClientRect();
-      topOffset = Math.max(topOffset, Math.round(rect.bottom + (window.innerWidth <= 768 ? 8 : 12)));
-    }
-
-    root.style.top = `${topOffset}px`;
+    root.style.top = '';
+    root.style.right = '';
+    root.style.left = '';
   }
 
   function setStreakWidgetOpen(nextOpen) {
@@ -1780,6 +1750,86 @@
     }
   };
 
+  /* ==========================================================
+     移动端底部导航
+     直接复用侧边栏的链接、图标与文案，导航配置因此只有一处来源。
+     ========================================================== */
+
+  function initMobileTabbar() {
+    if (!document.querySelector('.global-sidebar')) return;
+    if (document.querySelector('.mobile-tabbar')) return;
+
+    const links = Array.from(document.querySelectorAll('.global-sidebar a[data-side-link]'));
+    if (!links.length) return;
+
+    const currentPage = getCurrentPageId();
+    const items = links
+      .map(function (link) {
+        const href = link.getAttribute('href') || '';
+        const target = normalizeTargetPage(link.getAttribute('data-side-link') || href);
+        const labelNode = link.querySelector('.st-nav-label');
+        const iconNode = link.querySelector('.st-nav-icon');
+        const label = labelNode ? String(labelNode.textContent || '').trim() : '';
+        if (!target || !label) return '';
+
+        const isActive = target === currentPage;
+        return [
+          '<a class="mobile-tabbar-item' + (isActive ? ' active' : '') + '" href="' + esc(href) + '"',
+          isActive ? ' aria-current="page"' : '',
+          '>',
+          '<span class="mobile-tabbar-icon" aria-hidden="true">' + (iconNode ? iconNode.innerHTML : '') + '</span>',
+          '<span class="mobile-tabbar-label">' + esc(label) + '</span>',
+          '</a>'
+        ].join('');
+      })
+      .filter(Boolean);
+
+    if (!items.length) return;
+
+    const tabbar = document.createElement('nav');
+    tabbar.className = 'mobile-tabbar';
+    tabbar.setAttribute('aria-label', '主导航');
+    tabbar.innerHTML = items.join('');
+    document.body.appendChild(tabbar);
+    document.body.classList.add('has-mobile-tabbar');
+
+    bindTabbarSuppression();
+  }
+
+  // 输入框聚焦时收起 Tab，避免遮挡聊天与答题的发送按钮。
+  function bindTabbarSuppression() {
+    if (document.body.dataset.tabbarSuppressBound) return;
+    document.body.dataset.tabbarSuppressBound = '1';
+
+    const sync = function (target) {
+      const tag = target && target.tagName ? String(target.tagName).toLowerCase() : '';
+      const editable = tag === 'input' || tag === 'textarea' || tag === 'select'
+        || !!(target && target.isContentEditable);
+      document.body.classList.toggle('tabbar-suppressed', editable);
+    };
+
+    document.addEventListener('focusin', function (event) { sync(event.target); });
+    document.addEventListener('focusout', function () {
+      window.setTimeout(function () { sync(document.activeElement); }, 0);
+    });
+  }
+
+  /* ==========================================================
+     PWA：只注册 Service Worker，业务逻辑不依赖它
+     HTTP 部署下浏览器不允许注册，因此静默跳过。
+     ========================================================== */
+
+  function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    if (!window.isSecureContext) return;
+
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () {
+        // 注册失败不影响任何业务功能。
+      });
+    }, { once: true });
+  }
+
   function initPageShellRuntime() {
     initLearningTelemetry();
     initGlobalStreakWidget();
@@ -1791,6 +1841,8 @@
     }
 
     initShellTools();
+    initMobileTabbar();
+    registerServiceWorker();
   }
 
   try {

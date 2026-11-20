@@ -568,6 +568,20 @@
     const mime = String(item.mime || '').toLowerCase();
     const kind = String(item.kind || 'document').toLowerCase();
 
+    // 切换资料时停止上一份的朗读；音视频与图片没有可读文本，隐藏入口
+    if (window.SpeechPlayer && typeof window.SpeechPlayer.stop === 'function') {
+      window.SpeechPlayer.stop();
+    }
+    const speakBtn = document.getElementById('spaceReaderSpeakBtn');
+    if (speakBtn) {
+      const isMediaPreview = kind === 'audio'
+        || kind === 'video'
+        || mime.startsWith('audio/')
+        || mime.startsWith('video/')
+        || mime.startsWith('image/');
+      speakBtn.hidden = isMediaPreview || kind === 'folder';
+    }
+
     if (kind === 'folder') {
       body.innerHTML = '<div class="space-reader-document"><div class="space-reader-note">当前为文件夹占位项，可返回空间继续添加真实内容。</div></div>';
       return;
@@ -783,11 +797,23 @@
     title.textContent = item.name || '未命名文件';
     meta.textContent = `${activeSpace ? (activeSpace.name || '当前空间') : '当前空间'} · ${getItemKindLabel(item)}`;
 
+    const knowledgePoints = (Array.isArray(item.knowledgePoints) ? item.knowledgePoints : [])
+      .map(function (point) { return String(point && point.title || point || '').trim(); })
+      .filter(Boolean);
+    const topics = (Array.isArray(item.topics) ? item.topics : [])
+      .map(function (topic) { return String(topic || '').trim(); })
+      .filter(Boolean);
+    const knowledgeText = knowledgePoints.length
+      ? knowledgePoints.slice(0, 6).join('、')
+      : (topics.length ? topics.slice(0, 6).join('、') : '暂未抽取到知识点');
+
     const rows = [
       { label: '类型', value: getItemKindLabel(item) },
       { label: 'MIME', value: String(item.mime || '').trim() || '--' },
       { label: '大小', value: formatFileSize(item.size) },
       { label: '来源', value: String(item.source || '').trim() || '--' },
+      { label: '知识点', value: knowledgeText },
+      { label: '可检索', value: item.retrievalReady ? '已就绪，可用于问答与练习' : '内容不足，暂不可检索' },
       { label: '添加时间', value: formatDateTimeLabel(item.addedAt) },
       { label: '更新时间', value: formatDateTimeLabel(item.updatedAt || item.addedAt) }
     ];
@@ -1701,6 +1727,137 @@
     document.body.dataset.spacePageBound = '1';
   }
 
+  /* ---------------- 空间内搜索 ---------------- */
+
+  function getSearchElements() {
+    return {
+      layer: document.getElementById('spaceSearchLayer'),
+      trigger: document.getElementById('spaceSearchBtn'),
+      form: document.getElementById('spaceSearchForm'),
+      input: document.getElementById('spaceSearchInput'),
+      submit: document.getElementById('spaceSearchSubmit'),
+      status: document.getElementById('spaceSearchStatus'),
+      results: document.getElementById('spaceSearchResults')
+    };
+  }
+
+  function setSearchStatus(message, isError) {
+    const { status } = getSearchElements();
+    if (!status) return;
+    const text = String(message || '');
+    status.textContent = text;
+    status.hidden = !text;
+    status.classList.toggle('is-error', !!isError);
+  }
+
+  function openSearchPanel() {
+    const els = getSearchElements();
+    if (!els.layer) return;
+
+    els.layer.hidden = false;
+    if (els.trigger) els.trigger.setAttribute('aria-expanded', 'true');
+    if (els.results) els.results.innerHTML = '';
+    if (els.input) {
+      els.input.value = '';
+      window.setTimeout(function () { els.input.focus(); }, 20);
+    }
+    setSearchStatus('');
+  }
+
+  function closeSearchPanel() {
+    const els = getSearchElements();
+    if (!els.layer) return;
+
+    els.layer.hidden = true;
+    if (els.trigger) els.trigger.setAttribute('aria-expanded', 'false');
+  }
+
+  function renderSearchResults(keyword, results) {
+    const els = getSearchElements();
+    if (!els.results) return;
+
+    if (!results.length) {
+      els.results.innerHTML = '';
+      setSearchStatus(`没有找到包含「${keyword}」的资料。`, true);
+      return;
+    }
+
+    setSearchStatus(`找到 ${results.length} 条结果`);
+    els.results.innerHTML = results.map(function (row) {
+      const meta = [row.space_name, row.kind].filter(Boolean).join(' · ');
+      return `
+        <button type="button" class="space-search-result"
+                data-search-space="${esc(row.space_id)}"
+                data-search-item="${esc(row.item_id)}">
+          <span class="space-search-result-title">${esc(row.name || '未命名资料')}</span>
+          <span class="space-search-result-snippet">${esc(row.snippet || '')}</span>
+          <span class="space-search-result-meta">${esc(meta)}</span>
+        </button>
+      `;
+    }).join('');
+  }
+
+  async function submitSpaceSearch(event) {
+    if (event) event.preventDefault();
+
+    const els = getSearchElements();
+    const api = getSpaceApi();
+    const keyword = String((els.input && els.input.value) || '').trim();
+
+    if (!keyword) {
+      setSearchStatus('请输入关键词', true);
+      return;
+    }
+    if (!api || typeof api.searchItems !== 'function') {
+      setSearchStatus('搜索服务不可用，请刷新页面重试', true);
+      return;
+    }
+
+    if (els.submit) els.submit.disabled = true;
+    setSearchStatus('正在搜索…');
+
+    try {
+      const data = await api.searchItems(getUserId(), keyword, 20);
+      renderSearchResults(keyword, data.results || []);
+    } catch (error) {
+      setSearchStatus((error && error.message) || '搜索失败，请稍后重试', true);
+    } finally {
+      if (els.submit) els.submit.disabled = false;
+    }
+  }
+
+  function bindSpaceSearch() {
+    const els = getSearchElements();
+    if (!els.layer || els.layer.dataset.bound === '1') return;
+    els.layer.dataset.bound = '1';
+
+    if (els.trigger) els.trigger.addEventListener('click', openSearchPanel);
+    const closeBtn = document.getElementById('spaceSearchClose');
+    if (closeBtn) closeBtn.addEventListener('click', closeSearchPanel);
+    if (els.form) els.form.addEventListener('submit', submitSpaceSearch);
+
+    els.layer.addEventListener('click', function (event) {
+      if (event.target === els.layer) {
+        closeSearchPanel();
+        return;
+      }
+
+      const result = event.target.closest('[data-search-space]');
+      if (!result) return;
+
+      const spaceId = result.getAttribute('data-search-space') || '';
+      const itemId = result.getAttribute('data-search-item') || '';
+      closeSearchPanel();
+      window.location.href = buildSpacesPageUrl(spaceId, itemId);
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && !els.layer.hidden) {
+        closeSearchPanel();
+      }
+    });
+  }
+
   async function init() {
     const shouldCreateSpaceFromQuery = hasCreateSpaceQuery();
     if (window.PageShell && typeof window.PageShell.initGlobalSidebar === 'function') {
@@ -1709,6 +1866,7 @@
 
     bindShellActions();
     bindGlobalListeners();
+    bindSpaceSearch();
     syncHeader();
 
     try {

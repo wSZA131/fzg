@@ -123,7 +123,7 @@ QWEN_MODEL_NAME=<控制台中的模型名>
 说明：
 - `QWEN_API_URL` 可填完整 `.../chat/completions`，代码会自动归一为 base_url。
 - `/api/ask`、`/api/analyze` 走 `AI_PROVIDER` 选择的分支；为避免两套配置不一致，建议统一使用 `AI_PROVIDER=qwen` + MaaS 端点。
-- 需要真实识题时再设置 `OCR_PROVIDER=qwen_vl`；演示阶段用 `mock` 即可，文本提问不受影响。
+- 图片文字识别默认走镜像内置的本地离线 OCR（`OCR_PROVIDER=auto`，无需密钥）；如需更高精度可设 `OCR_PROVIDER=qwen_vl` 复用 MaaS 的多模态模型。
 
 ### 4.2 RDS for MySQL
 
@@ -194,6 +194,30 @@ AGENT_HISTORY_MAX_SESSIONS=200
 
 ---
 
+### 4.6 低内存机型（2C2G）
+
+`torch` + BGE 模型常驻约 1 GB，2 GB 实例会 OOM。改用低配模板：
+
+```bash
+cp .env.lite.example .env
+# 必填：QWEN_API_KEY、FLASK_SECRET_KEY
+docker compose --env-file .env build      # 构建时读取 LITE_MODE=true
+docker compose up -d
+```
+
+差异：
+
+| 项 | 完整模式 | 低配模式 |
+| --- | --- | --- |
+| torch + sentence-transformers | 安装 | 不安装 |
+| 镜像体积 | ~2.5 GB | ~400 MB |
+| 运行内存 | 1.5–2.5 GB | 700–900 MB |
+| 检索方式 | 语义向量 + TF-IDF 混合 | TF-IDF + FAISS |
+| Redis / Celery | 启用 | 关闭（内存会话） |
+
+> **不要在 2C2G 机器上 `docker build`**：torch 解压与 pip 缓存需要 10 GB 以上临时空间，
+> 且构建期间极易 OOM。请在本地构建后 `docker tag` + `docker push` 到 SWR，服务器只 `docker pull`。
+
 ## 5. 启动与验收
 
 ```bash
@@ -227,6 +251,38 @@ bash healthcheck.sh http://<ecs-public-ip>
 | 知识图谱 | `/knowledge-map.html` | 概念关系与掌握度着色 |
 | 题库练习 | `/question-bank.html` | 组卷、作答、错因诊断 |
 | 学习空间 | `/spaces.html` | 资料上传、私有知识库入库与检索 |
+
+### 5.1 移动端访问与 PWA
+
+手机直接访问 `http://<ecs-public-ip>` 即可，窄屏下会自动出现底部 Tab 导航，不需要单独安装客户端。
+
+- **添加到主屏幕**：iOS Safari「共享 → 添加到主屏幕」；Android Chrome 菜单「安装应用」。启动后以独立窗口运行。
+- **离线兜底**：`sw.js` 缓存静态资源与已访问页面，断网时回落到 `offline.html`，避免演示现场白屏。
+- **离线缓存需要 HTTPS**：浏览器只在 HTTPS 或 localhost 下注册 Service Worker。HTTP 部署时该能力静默跳过，其余功能不受影响。需要完整 PWA 体验时，在华为云 CCM 申请免费证书，为 `deploy/nginx.conf` 增加 443 server 块并放通安全组 443。
+- **代理层不要缓存 SW**：`deploy/nginx.conf` 已为 `/sw.js` 与 `/manifest.webmanifest` 单独关闭长缓存，否则升级后旧脚本会一直生效。
+
+### 5.2 观测与限流
+
+`GET /metrics` 输出 Prometheus 文本格式，包含智能体成功率、平均时延、超时与重试次数、
+工具调用失败率，以及各限流桶的放行/拒绝数。接入华为云 AOM 时，采集任务指向
+`http://<ecs-internal-ip>/metrics`，抓取间隔 30s 即可。
+
+```bash
+curl -s http://<ecs-public-ip>/metrics | head -20
+```
+
+接口限流在 `deploy/.env.example` 中默认开启（`RATE_LIMIT_ENABLED=true`），按接口成本分桶：
+
+| 桶 | 路径 | 默认上限 |
+| --- | --- | --- |
+| `agent_tutor` | `/api/agent/ocr-tutor` | 120 次/分钟/IP |
+| `agent_eval` | `/api/agent/eval`、`eval-ab` | 20 次/分钟/IP |
+| `auth` | `/api/auth/login`、`register` | 10 次/分钟/IP |
+| `api` | 其余 `/api/*` | 240 次/分钟/IP |
+
+`/health` 与 `/metrics` 豁免。超限返回 `429` 与 `Retry-After`。
+**一个班级共用出口 IP 时**，把 `RATE_LIMIT_AGENT_TUTOR` 按人数上调，否则会互相挤占配额。
+多副本部署时进程内计数不共享，应在 Nginx 或 WAF 层追加限流。
 
 ---
 
@@ -282,5 +338,9 @@ docker run --rm -v fzg_fzg-data:/data -v "$PWD":/backup alpine tar czf /backup/f
 - [ ] DCS 已连通，`celery_enabled: true`（如启用异步）
 - [ ] 安全组仅放通 80/443，3306/6379 不对公网开放
 - [ ] `healthcheck.sh` 全部通过
+- [ ] `python backend/scripts/verify_kb_artifacts.py` 退出码为 0（无 LFS 指针残留）
+- [ ] `curl /metrics` 返回 200，且已接入 AOM 或 Prometheus
+- [ ] `RATE_LIMIT_ENABLED=true` 已开启，并按预期人数调整了阈值
+- [ ] 手机实测底部 Tab 导航、拍照识题与横竖屏切换正常（见 5.1 节）
 - [ ] 6 个页面截图与录屏已归档（见 `docs/DEMO_SCRIPT.md`）
 - [ ] 云资源账单与代金券余额已确认

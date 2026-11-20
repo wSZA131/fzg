@@ -18,3 +18,14 @@ docs
 deploy/.env
 *.md
 要求.txt
+
+# 本地开发数据与密钥不进镜像（pro_kb 知识库制品仍会打包）
+backend/data/*.db
+backend/data/*.json
+backend/data/*.jsonl
+backend/data/*.db-journal
+backend/data/*.db-wal
+backend/data/*.db-shm
+backend/config/.env
+backend/.env
+.env

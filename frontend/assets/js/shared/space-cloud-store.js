@@ -58,10 +58,33 @@
     return payload;
   }
 
+  function normalizeKnowledgePoints(points) {
+    if (!Array.isArray(points)) return [];
+    return points.map(function (point) {
+      if (typeof point === 'string') {
+        const text = point.trim();
+        return text ? { title: text, detail: text, weight: 0.3 } : null;
+      }
+      if (!point || typeof point !== 'object') return null;
+      const title = String(point.title || point.name || '').trim();
+      const detail = String(point.detail || point.content || title).trim();
+      if (!title && !detail) return null;
+      return {
+        title: title || detail.slice(0, 20),
+        detail: detail || title,
+        weight: normalizeNumber(point.weight, 0.3)
+      };
+    }).filter(Boolean);
+  }
+
   function normalizeItem(item) {
     if (!item || typeof item !== 'object') return null;
     const itemId = String(item.id || '').trim();
     if (!itemId) return null;
+    const knowledgePoints = normalizeKnowledgePoints(item.knowledgePoints || item.knowledge_points);
+    const topics = Array.isArray(item.topics)
+      ? item.topics.map(function (topic) { return String(topic || '').trim(); }).filter(Boolean)
+      : [];
     return {
       id: itemId,
       name: String(item.name || '未命名文件'),
@@ -71,6 +94,12 @@
       source: String(item.source || ''),
       content: String(item.content || ''),
       summary: String(item.summary || ''),
+      topics: topics,
+      knowledgePoints: knowledgePoints,
+      knowledgePointCount: knowledgePoints.length,
+      textExtractMethod: String(item.textExtractMethod || item.text_extract_method || ''),
+      textChunkCount: Math.max(0, normalizeNumber(item.textChunkCount || item.text_chunk_count, 0)),
+      retrievalReady: !!item.retrievalReady,
       addedAt: normalizeNumber(item.addedAt || item.added_at, Date.now()),
       updatedAt: normalizeNumber(item.updatedAt || item.updated_at || item.addedAt || item.added_at, Date.now()),
       previewUrl: String(item.previewUrl || item.preview_url || ''),
@@ -286,6 +315,25 @@
     return '';
   }
 
+  async function searchItems(userId, query, limit) {
+    const keyword = String(query || '').trim();
+    if (!keyword) return { query: '', count: 0, results: [] };
+
+    const params = new URLSearchParams({
+      user_id: String(userId || ''),
+      q: keyword,
+      limit: String(limit || 20)
+    });
+    const data = await request(`/api/spaces/search?${params.toString()}`);
+    return {
+      query: String(data.query || keyword),
+      count: Number(data.count || 0),
+      results: Array.isArray(data.results)
+        ? data.results.filter(function (row) { return row && row.item_id; })
+        : []
+    };
+  }
+
   window.SpaceCloudStore = {
     withSuggestion,
     broadcastSpaceChange,
@@ -300,6 +348,7 @@
     updateItem,
     moveItem,
     deleteItem,
+    searchItems,
     getItemSnippet,
     buildItemPreviewHtml
   };

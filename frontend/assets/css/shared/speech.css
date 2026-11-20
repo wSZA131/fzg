@@ -1,0 +1,70 @@
+/* ==========================================================
+   朗读按钮 / 听讲解
+   ----------------------------------------------------------
+   与 assets/js/shared/speech-player.js 配套。
+   问答、空间资料预览、知识点详情三处复用同一套结构与样式，
+   因此按钮必须包含 .message-action-icon 与 .message-action-label，
+   speech-player.js 依赖这两个类切换播放状态。
+   ========================================================== */
+
+.message-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* 放在工具栏等已有留白的位置时，去掉上外边距 */
+.message-actions.is-inline {
+  margin-top: 0;
+}
+
+.message-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 13px;
+  border: 1px solid #dbe4ef;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #475569;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.16s ease, color 0.16s ease, background-color 0.16s ease;
+}
+
+.message-action-btn:hover {
+  border-color: #c3d3e6;
+  color: #0f172a;
+}
+
+.message-action-btn.is-speaking {
+  border-color: #111111;
+  background: #111111;
+  color: #ffffff;
+}
+
+.message-action-btn:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.message-action-btn[hidden] {
+  display: none;
+}
+
+.message-action-icon {
+  font-size: 10px;
+  line-height: 1;
+}
+
+@media (max-width: 640px) {
+  .message-action-btn {
+    min-height: 34px;
+    font-size: 12px;
+  }
+}

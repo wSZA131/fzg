@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <title>离线 - 坊知工</title>
+  <link rel="icon" type="image/svg+xml" href="assets/images/app-icon.svg">
+  <style>
+    :root { color-scheme: light; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: calc(32px + env(safe-area-inset-top)) 24px calc(32px + env(safe-area-inset-bottom));
+      font-family: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: #14161b;
+      background: #ffffff;
+      -webkit-font-smoothing: antialiased;
+    }
+    .offline-card { width: 100%; max-width: 380px; text-align: center; }
+    .offline-mark {
+      display: inline-flex; align-items: flex-end; gap: 6px;
+      height: 44px; margin-bottom: 26px;
+    }
+    .offline-mark span { display: block; width: 12px; height: 44px; border-radius: 6px; background: #14161b; }
+    .offline-mark span:last-child { width: 12px; height: 12px; border-radius: 50%; margin-bottom: 0; }
+    h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.01em; }
+    p { margin-top: 12px; font-size: 14px; line-height: 1.75; color: #8a90a0; }
+    button {
+      margin-top: 28px; width: 100%; height: 46px;
+      border: 0; border-radius: 12px;
+      font: inherit; font-size: 15px; font-weight: 600;
+      color: #ffffff; background: #14161b;
+      cursor: pointer; transition: opacity 0.18s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button:active { opacity: 0.82; }
+    button:focus-visible { outline: 2px solid #14161b; outline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <main class="offline-card">
+    <div class="offline-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+    <h1>当前处于离线状态</h1>
+    <p>网络连接中断了。已缓存的页面仍可浏览，智能问答、拍照识题等在线功能将在网络恢复后自动可用。</p>
+    <button type="button" id="offlineRetry">重新连接</button>
+  </main>
+  <script>
+    document.getElementById('offlineRetry').addEventListener('click', function () {
+      window.location.reload();
+    });
+    window.addEventListener('online', function () {
+      window.location.reload();
+    });
+  </script>
+</body>
+</html>

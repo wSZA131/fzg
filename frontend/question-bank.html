@@ -1,19 +1,38 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script>
+        /* 主题需在首屏渲染前生效，避免深色模式闪白 */
+        (function () {
+            try {
+                if (window.localStorage.getItem('fangzhigong_theme_pref') === 'dark') {
+                    document.documentElement.setAttribute('data-fangzhigong-theme', 'dark');
+                    document.documentElement.style.colorScheme = 'dark';
+                }
+            } catch (error) { /* 隐私模式下 localStorage 不可用 */ }
+        })();
+    </script>
+
     <link rel="icon" type="image/svg+xml" href="assets/images/app-icon.svg">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="坊知工">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="assets/images/app-icon-192.png">
+    <link rel="stylesheet" href="assets/css/shared/mobile-shell.css?v=20261118-mobile-v1">
     <title>题库练习 - 坊知工</title>
-    <link rel="stylesheet" href="assets/css/shared/auth-ui.css?v=20260512-auth-modal-scrollbarhide-v3">
+    <link rel="stylesheet" href="assets/css/shared/auth-ui.css?v=20261119-auth-v4">
     <link rel="stylesheet" href="assets/css/pages/chat-page.css">
     <link rel="stylesheet" href="assets/css/pages/question-bank-page.css?v=20261114-question-bank-modal-v1">
     <link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"></noscript>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
-    <link rel="stylesheet" href="assets/css/shared/site-theme.css?v=20261113-brand-icon-v2">
-    <link rel="stylesheet" href="assets/css/pages/practice-page.css?v=20261113-practice-v7">
+    <link rel="stylesheet" href="assets/css/shared/site-theme.css?v=20261115-knowledge-v1">
+    <link rel="stylesheet" href="assets/css/pages/practice-page.css?v=20261115-knowledge-v1">
     <link rel="stylesheet" href="assets/css/shared/study-drawer.css?v=20261113-study-drawer-v2">
 </head>
 <body>
@@ -42,6 +61,7 @@
     </aside>
 
     <main class="chat-page-shell practice-page-shell">
+        <div class="page-streak-dock" id="globalStreakDock"></div>
         <header class="chat-topbar practice-topbar">
             <div class="chat-topbar-main">
                 <div class="chat-title">题库练习</div>
@@ -56,7 +76,6 @@
                     </svg>
                     <span>学习</span>
                 </button>
-                <div class="practice-streak-dock" id="globalStreakDock"></div>
                 <button class="practice-ghost-btn" id="manageQuestionBankBtn" type="button">我的题库</button>
             </div>
         </header>
@@ -107,6 +126,17 @@
                             <option value="short_answer">解答题</option>
                         </select>
                     </label>
+                </div>
+                <div class="practice-material-block" id="practiceMaterialBlock" hidden>
+                    <div class="practice-material-head">
+                        <span class="practice-material-title">资料知识点</span>
+                        <span class="practice-material-hint" id="practiceMaterialHint">由上传资料自动抽取，点击即可用于出题</span>
+                        <button class="practice-ghost-btn practice-material-refresh" id="practiceMaterialRefreshBtn" type="button">刷新</button>
+                    </div>
+                    <div class="practice-material-chips" id="practiceMaterialChips"></div>
+                    <div class="practice-material-actions">
+                        <button class="practice-primary-btn practice-material-generate" id="practiceMaterialGenerateBtn" type="button" hidden>用该知识点出题并开始</button>
+                    </div>
                 </div>
                 <div class="practice-setup-actions">
                     <button class="practice-primary-btn" id="startPracticeBtn" type="button">开始练习</button>
@@ -350,13 +380,14 @@
         </div>
     </div>
 
-    <script src="assets/js/shared/user-context.js?v=20260330-authfix"></script>
+    <script src="assets/js/shared/user-context.js?v=20261119-auth-v4"></script>
     <script src="assets/js/shared/api-utils.js?v=20260511-auth-dup-check"></script>
     <script src="assets/js/shared/project-local-data.js?v=20260330-authfix"></script>
-    <script src="assets/js/shared/space-cloud-store.js?v=20260403-sidebarspaces"></script>
-    <script src="assets/js/shared/auth-ui.js?v=20260512-auth-register-autofill-fix"></script>
-    <script src="assets/js/shared/page-shell.js?v=20261113-graph-merge"></script>
+    <script src="assets/js/shared/space-cloud-store.js?v=20261118-search-v1"></script>
+    <script src="assets/js/shared/i18n.js?v=20261119-i18n-v2"></script>
+    <script src="assets/js/shared/auth-ui.js?v=20261119-auth-v4"></script>
+    <script src="assets/js/shared/page-shell.js?v=20261118-mobile-v1"></script>
     <script src="assets/js/shared/study-drawer.js?v=20261113-study-drawer-v3"></script>
-    <script src="assets/js/pages/practice-page.js?v=20261114-question-bank-modal-v1"></script>
+    <script src="assets/js/pages/practice-page.js?v=20261118-auth-v2"></script>
 </body>
 </html>

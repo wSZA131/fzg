@@ -61,6 +61,23 @@ bash healthcheck.sh http://<host>
 
 > 注意：`backend/data/pro_kb` 由 Git LFS 管理，克隆后需执行 `git lfs install && git lfs pull`，否则 RAG 检索会退化为演示数据（`/health` 会给出提示）。
 
+### 低内存部署（2 核 2G 实例）
+
+`torch` + `sentence-transformers` 约需 1 GB 内存，2G 机型装不下。项目支持低配构建：
+
+```bash
+cd deploy
+cp .env.lite.example .env     # 填 MaaS key 与 FLASK_SECRET_KEY
+bash deploy.sh
+```
+
+`LITE_MODE=true` 时镜像不装 torch 与 BGE 模型（约 400 MB），检索退化为
+**TF-IDF 编码 + FAISS 检索**——`faiss-cpu` 仅 30–50 MB，完整知识库照样能检索，
+只是没有语义向量匹配。运行内存实测约 700–900 MB。
+
+低配模式同时关闭 Redis/Celery（会话走进程内存），并收紧上传上限与日志体积。
+完整向量检索能力需 4C8G 及以上，使用常规 `deploy/.env.example`。
+
 ### 1. 安装依赖
 
 ```powershell
@@ -253,9 +270,75 @@ python -m unittest tests.test_agent_kb_contract -v
 python -m unittest tests.test_knowledge_base_graphrag -v
 ```
 
+全量测试（`backend/pytest.ini` 已限定只收集 `tests/`）：
+
+```bash
+cd backend
+pytest -q      # 期望 143 passed, 1 skipped
+```
+
+## 知识库制品自检
+
+`backend/data/pro_kb/` 下的大文件由 Git LFS 管理。若克隆后未拉取，文件只是约 130 字节的指针，
+**服务仍能正常启动，但检索会静默降级为内置演示数据**，此时任何检索指标都不代表真实效果。
+
+```bash
+python backend/scripts/verify_kb_artifacts.py
+```
+
+退出码非 0 表示制品不可用，脚本会直接给出修复命令。
+
+## 运维观测
+
+- `GET /metrics`：Prometheus 文本格式，包含智能体成功率、平均时延、超时/重试次数、
+  工具调用失败率与限流统计，可直接接入华为云 AOM 或自建 Prometheus。
+- `GET /api/agent/metrics`：同一批指标的 JSON 版本，便于页面展示。
+- `GET /health`：就绪度自检（模型 key、知识库、图谱、存储、异步链路逐项报告）。
+
+接口限流默认关闭，公网部署请在 `.env` 中开启：
+
+```env
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_AGENT_TUTOR=120   # 单个 IP 每分钟智能问答次数
+```
+
+限流按接口成本分桶（智能问答 60/min、登录注册 10/min、其它 API 240/min），
+`/health` 与 `/metrics` 豁免。超限返回 `429` 并携带 `Retry-After`。
+
+> 评测指标怎么读、报告什么时候有效，见 [评测口径与复现指南](docs/EVAL_GUIDE.md)。
+
 ## 版本迭代时间线（倒序）
 
-### 2026-11-13（当前）
+### 2026-11-18（当前）
+
+- 移动端适配：所有页面补全 `viewport-fit=cover`；底部 Tab 导航由 `page-shell.js` 复用侧边栏导航数据动态生成，导航配置保持单一来源。
+- 新增 PWA 能力：`manifest.webmanifest`、应用图标、`offline.html`、`sw.js`（仅缓存静态资源，`/api/` 请求完全绕过）、`assets/css/shared/mobile-shell.css`（仅在 `max-width: 760px` 生效）。
+- `deploy/nginx.conf` 为 `/sw.js` 与 `/manifest.webmanifest` 单独关闭长缓存，避免升级后旧脚本长期生效。
+- 新增 `GET /metrics`（Prometheus 文本格式）与接口限流（滑动窗口，默认关闭、部署模板默认开启，按接口成本分桶，`/health` 与 `/metrics` 豁免）。
+- 评测接口新增 `meta` 环境快照（`agent_mode` / `kb_mode` / `ai_key_configured` / `notes`），`run_agent_eval.py` 增加 `--require-ai`，避免把离线兜底分当成模型能力分写入报告。
+- 新增 `backend/scripts/verify_kb_artifacts.py`，一键识别 Git LFS 指针并给出修复命令。
+- 新增 `docs/EVAL_GUIDE.md`：三份评测报告的差异、指标含义与有效性判定。
+- 新增 `backend/pytest.ini` 限定测试收集范围，修复 `scripts/test_*.py` 被误收集导致整轮测试中断的问题；补限流与可观测性契约测试（7 例）。
+- 账号系统升级：密码强度校验（8 位 + 字母 + 数字）、修改密码、恢复码找回密码（`services/auth_credentials.py`，独立存储不侵入 `auth_users` 表）、登录失败 5 次锁定 10 分钟、登录设备列表与「退出其他所有设备」。
+- 修复「游客数据绑定」名不副实：注册时真实继承访客数据；登录默认不合并（避免公共设备串号），仅在前端显式勾选时携带 `adopt_guest_data=true` 触发迁移。删除两个硬编码返回空壳的 binding 函数。
+- 练习记录落库：新增 `POST /api/question_bank/practice-session` 与 `GET /api/question_bank/practice-sessions`，结束练习不再只写 localStorage。
+- 删除无任何引用的重复认证实现 `frontend/js/auth.js`（27.8 KB）及其空目录。
+- 登录 UI：密码可见切换、强度提示、找回密码面板、注册后一次性展示恢复码、设置面板新增「安全」「登录设备」两个页签。
+- 新增契约测试 `test_auth_upgrade_contract.py`（16 例）与 `test_practice_session_contract.py`（4 例），测试总数 143 → 163。
+- 新增「朗读 / 听讲解」：`assets/js/shared/speech-player.js` 使用浏览器原生 SpeechSynthesis，零依赖零费用、内容不出本机；自动清理 Markdown 与公式，长文本按句分段播放，支持播放中再次点击停止；不支持该 API 的浏览器不显示入口。
+- 错题重练接入历史错题库：当前会话无错题时回退到 `GET /api/wrong_questions`，最多载入 10 道并按解答题重练（历史记录未保存选项）。
+- 学习空间新增跨空间搜索：`GET /api/spaces/search` 按标题、摘要、正文与标签匹配，返回所属空间与命中片段；前端在顶栏提供搜索入口，点击结果直接跳转并定位到该资料。
+- 新增契约测试 `test_space_search_contract.py`（6 例），测试总数 163 → 169。
+- 朗读能力扩展到三处：问答消息、学习空间资料预览、知识图谱知识点详情。样式抽到 `assets/css/shared/speech.css` 共用；预览页按资料类型自动隐藏入口（音视频与图片无文本可读），切换资料时自动停止上一份朗读。
+- 账号设置精简：移除「登录设备」页签与「聊天模式」选项；新增账户资料编辑（`PUT /api/auth/profile`，支持修改昵称），密码显示/隐藏改为图标；登录页「记住密码」替代原「游客数据继承」勾选（注册仍自动继承访客数据）。
+- 主题与语言落地：新增深色主题（`data-fangzhigong-theme`，含首屏防闪白脚本）与中英文界面（`assets/js/shared/i18n.js`，覆盖登录、账号设置与主导航）。切换语言后整页重载。
+- 退出登录后自动回到未登录首页；新增 `PUT /api/auth/profile` 契约测试（3 例），测试总数 169 → 172。
+- 账号资料新增「个人简介」：`auth_users.bio`（JSON 仓储直存，SQL 仓储启动时幂等补列），`PUT /api/auth/profile` 支持 `bio`；资料完成度改为按「昵称 + 简介」真实计算，不再固定 100%。
+- 深色主题修复：批量归组 157 个白底类选择器统一压深，解决"背景变黑、卡片仍白"的割裂问题。
+- 语言切换修复：切换时同步调用 `PUT /api/auth/profile` 写入后端 locale，避免刷新后被 `/api/auth/me` 覆盖回旧值；同时把偏好写入独立 `localStorage` 键。
+- 契约测试增至 174（`test_auth_upgrade_contract.py` 21 例）。
+
+### 2026-11-13
 
 - 新增云端部署包：`deploy/Dockerfile`、`docker-compose.yml`、`nginx.conf`、`.env.example`、`deploy.sh`、`healthcheck.sh`。
 - 新增文档：华为云部署指南、参赛作品材料、Demo 演示脚本与文档索引；补齐 MIT 许可证。

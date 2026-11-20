@@ -13,6 +13,8 @@ from __future__ import annotations
 import hashlib
 import re
 import secrets
+import threading
+import time
 import uuid
 from datetime import datetime, timedelta
 
@@ -24,6 +26,7 @@ from ..config import (
     AUTH_TOUCH_INTERVAL_SECONDS,
     GUEST_USER_ID_PATTERN,
 )
+from ..services import auth_credentials
 from ..utils.http import (
     error_response,
     get_request_id,
@@ -83,6 +86,97 @@ def hash_session_token(token):
     return hashlib.sha256(str(token or "").encode("utf-8")).hexdigest()
 
 
+# ===== 密码强度与登录防护 =====
+
+PASSWORD_MIN_LENGTH = 8
+_LOGIN_LOCK_THRESHOLD = 5
+_LOGIN_LOCK_SECONDS = 10 * 60
+
+_login_failures = {}
+_login_failures_lock = threading.Lock()
+
+
+def validate_password_strength(password):
+    """注册 / 改密 / 重置时使用；登录不做校验，以兼容历史账号。"""
+    text = str(password or "")
+    if len(text) < PASSWORD_MIN_LENGTH:
+        return f"密码长度至少需要 {PASSWORD_MIN_LENGTH} 位"
+    if not re.search(r"[A-Za-z]", text):
+        return "密码需要包含字母"
+    if not re.search(r"\d", text):
+        return "密码需要包含数字"
+    return ""
+
+
+def check_login_locked(username):
+    """返回 (是否锁定, 剩余秒数)。"""
+    key = str(username or "").strip()
+    if not key:
+        return False, 0
+    with _login_failures_lock:
+        record = _login_failures.get(key)
+        if not record:
+            return False, 0
+        remaining = float(record.get("locked_until") or 0) - time.time()
+        return (True, remaining) if remaining > 0 else (False, 0)
+
+
+def record_login_failure(username):
+    key = str(username or "").strip()
+    if not key:
+        return
+    with _login_failures_lock:
+        record = _login_failures.setdefault(key, {"count": 0, "locked_until": 0.0})
+        record["count"] = int(record.get("count") or 0) + 1
+        if record["count"] >= _LOGIN_LOCK_THRESHOLD:
+            record["locked_until"] = time.time() + _LOGIN_LOCK_SECONDS
+            record["count"] = 0
+
+
+def clear_login_failures(username):
+    key = str(username or "").strip()
+    if not key:
+        return
+    with _login_failures_lock:
+        _login_failures.pop(key, None)
+
+
+def reset_login_state():
+    """测试辅助：清空账号锁定计数。"""
+    with _login_failures_lock:
+        _login_failures.clear()
+
+
+def bind_guest_learning_data(guest_user_id, target_user_id, empty_message):
+    """把访客期间的学习数据真实迁移到账号。
+
+    历史上这里返回的是硬编码的空壳结果，导致「游客绑定」只有名目没有实际行为。
+    现在直接调用 server 的合并实现，并在无可迁移数据时给出说明。
+    """
+    server = _server()
+    normalized_guest = normalize_guest_binding_user_id(guest_user_id, target_user_id)
+    empty_summary = {
+        "guest_user_id": "",
+        "user_id": normalize_request_user_id(target_user_id, fallback=""),
+        "migrated": False,
+        "plans": 0,
+        "spaces": 0,
+        "space_items": 0,
+        "concepts": 0,
+        "relations": 0,
+        "knowledge_updated": False,
+        "events": 0,
+        "message": empty_message,
+    }
+    if not normalized_guest:
+        return empty_summary
+
+    summary = server.bind_guest_user_data_to_auth_user(normalized_guest, target_user_id)
+    if not summary.get("message"):
+        summary["message"] = "已继承访客期间的学习数据" if summary.get("migrated") else "访客数据为空，无需迁移"
+    return summary
+
+
 def build_public_auth_user(user):
     if not isinstance(user, dict):
         return {
@@ -97,6 +191,7 @@ def build_public_auth_user(user):
         "user_id": username,
         "username": username,
         "display_name": normalize_display_name(user.get("display_name"), fallback=username or "同学"),
+        "bio": str(user.get("bio") or "")[:500],
         "locale": normalize_auth_locale(user.get("locale")),
         "created_at": str(user.get("created_at") or "").strip(),
         "updated_at": str(user.get("updated_at") or "").strip(),
@@ -191,38 +286,6 @@ def require_auth_context():
     )
 
 
-def build_auth_register_binding_summary(target_user_id):
-    return {
-        "guest_user_id": "",
-        "user_id": normalize_request_user_id(target_user_id, fallback=""),
-        "migrated": False,
-        "plans": 0,
-        "spaces": 0,
-        "space_items": 0,
-        "concepts": 0,
-        "relations": 0,
-        "knowledge_updated": False,
-        "events": 0,
-        "message": "新账号默认不自动继承访客数据",
-    }
-
-
-def build_auth_login_binding_summary(target_user_id):
-    return {
-        "guest_user_id": "",
-        "user_id": normalize_request_user_id(target_user_id, fallback=""),
-        "migrated": False,
-        "plans": 0,
-        "spaces": 0,
-        "space_items": 0,
-        "concepts": 0,
-        "relations": 0,
-        "knowledge_updated": False,
-        "events": 0,
-        "message": "登录后默认使用账号自己的学习数据",
-    }
-
-
 def append_auth_login_behavior(user_id, source):
     user_key = str(user_id or "").strip()
     if not user_key:
@@ -259,8 +322,11 @@ def register_auth_user_api():
 
     if not username:
         return error_response(request_id, 400, "INVALID_INPUT", "账号格式不正确，请使用 3-32 位字母、数字或 . _ @ -")
-    if len(password) < 6:
-        return error_response(request_id, 400, "INVALID_INPUT", "密码长度至少需要 6 位")
+
+    strength_error = validate_password_strength(password)
+    if strength_error:
+        return error_response(request_id, 400, "WEAK_PASSWORD", strength_error)
+
     if server.get_auth_user(username):
         return error_response(request_id, 409, "AUTH_USER_EXISTS", "该账号已存在，请直接登录")
     if server.get_auth_user_by_display_name(display_name):
@@ -278,7 +344,12 @@ def register_auth_user_api():
     }
     saved_user = server.upsert_auth_user(user)
     session_bundle = create_auth_session_payload(saved_user)
-    binding = build_auth_register_binding_summary(username)
+    binding = bind_guest_learning_data(
+        data.get("guest_user_id"),
+        username,
+        "新账号默认不自动继承访客数据",
+    )
+    recovery_code = auth_credentials.issue(username)
     append_auth_login_behavior(username, "auth_register")
 
     return jsonify(success_payload(
@@ -292,6 +363,7 @@ def register_auth_user_api():
             "session_id": session_bundle["session_id"],
         },
         binding=binding,
+        recovery_code=recovery_code,
         error_code="",
         error_message="",
     ))
@@ -309,15 +381,43 @@ def login_auth_user_api():
     if not username or not password:
         return error_response(request_id, 400, "INVALID_INPUT", "请输入账号和密码")
 
+    locked, remaining = check_login_locked(username)
+    if locked:
+        minutes = int(remaining // 60) + 1
+        return error_response(
+            request_id,
+            429,
+            "AUTH_LOCKED",
+            f"该账号连续登录失败次数过多，请 {minutes} 分钟后再试",
+        )
+
     user = server.get_auth_user(username)
     if not user or not check_password_hash(str(user.get("password_hash") or ""), password):
+        record_login_failure(username)
+        locked_now, remaining_now = check_login_locked(username)
+        if locked_now:
+            return error_response(
+                request_id,
+                429,
+                "AUTH_LOCKED",
+                "连续登录失败次数过多，该账号已锁定 10 分钟",
+            )
         return error_response(request_id, 401, "AUTH_INVALID_CREDENTIALS", "账号或密码错误")
 
+    clear_login_failures(username)
     user["last_login_at"] = iso_now()
     user["updated_at"] = iso_now()
     saved_user = server.upsert_auth_user(user)
     session_bundle = create_auth_session_payload(saved_user)
-    binding = build_auth_login_binding_summary(username)
+
+    # 登录默认不合并访客数据：公共设备上前一位访客的进度不应污染账号。
+    # 只有前端明确提示并取得用户确认后，才带 adopt_guest_data=true 触发迁移。
+    adopt_guest = data.get("adopt_guest_data") is True
+    binding = bind_guest_learning_data(
+        data.get("guest_user_id") if adopt_guest else "",
+        username,
+        "已开启访客数据继承，但没有可迁移的数据" if adopt_guest else "登录后默认使用账号自己的学习数据",
+    )
     append_auth_login_behavior(username, "auth_login")
 
     return jsonify(success_payload(
@@ -411,6 +511,276 @@ def delete_auth_user_account_api():
             "graph_cleanup_attempted": graph_cleanup_attempted,
             "graph_deleted": graph_deleted,
         },
+        error_code="",
+        error_message="",
+    ))
+
+
+@auth_bp.route("/profile", methods=["PUT", "POST"])
+def update_auth_profile_api():
+    """修改当前账号的昵称与界面语言。"""
+    server = _server()
+    request_id = get_request_id()
+    auth_context = resolve_auth_context(touch=False)
+    if not auth_context:
+        return error_response(request_id, 401, "AUTH_REQUIRED", "当前登录状态已失效，请重新登录")
+
+    data = request.get_json(silent=True) or {}
+    user = auth_context["user"]
+    username = str(user.get("username") or "")
+    changed = False
+
+    if "display_name" in data:
+        display_name = normalize_display_name(
+            data.get("display_name"),
+            fallback=user.get("display_name") or username,
+        )
+        existing = server.get_auth_user_by_display_name(display_name)
+        if existing and str(existing.get("username") or "") != username:
+            return error_response(
+                request_id,
+                409,
+                "AUTH_DISPLAY_NAME_EXISTS",
+                "该昵称已被使用，请更换一个昵称",
+            )
+        if display_name != str(user.get("display_name") or ""):
+            user["display_name"] = display_name
+            changed = True
+
+    if "bio" in data:
+        bio = str(data.get("bio") or "").strip()[:500]
+        if bio != str(user.get("bio") or ""):
+            user["bio"] = bio
+            changed = True
+
+    if "locale" in data:
+        locale = normalize_auth_locale(data.get("locale"))
+        if locale != str(user.get("locale") or ""):
+            user["locale"] = locale
+            changed = True
+
+    if changed:
+        user["updated_at"] = iso_now()
+        user = server.upsert_auth_user(user)
+
+    return jsonify(success_payload(
+        request_id,
+        message="资料已更新" if changed else "没有需要更新的内容",
+        user=build_public_auth_user(user),
+        error_code="",
+        error_message="",
+    ))
+
+
+# ===== 密码与凭证管理 =====
+
+@auth_bp.route("/change-password", methods=["POST"])
+def change_password_api():
+    """修改密码，成功后撤销该账号的其他登录会话。"""
+    server = _server()
+    request_id = get_request_id()
+    auth_context = resolve_auth_context(touch=False)
+    if not auth_context:
+        return error_response(request_id, 401, "AUTH_REQUIRED", "当前登录状态已失效，请重新登录")
+
+    data = request.get_json(silent=True) or {}
+    old_password = str(data.get("old_password") or "")
+    new_password = str(data.get("new_password") or "")
+    if not old_password or not new_password:
+        return error_response(request_id, 400, "INVALID_INPUT", "请填写当前密码和新密码")
+
+    user = auth_context["user"]
+    if not check_password_hash(str(user.get("password_hash") or ""), old_password):
+        return error_response(request_id, 401, "AUTH_INVALID_CREDENTIALS", "当前密码不正确")
+
+    strength_error = validate_password_strength(new_password)
+    if strength_error:
+        return error_response(request_id, 400, "WEAK_PASSWORD", strength_error)
+    if old_password == new_password:
+        return error_response(request_id, 400, "INVALID_INPUT", "新密码不能与当前密码相同")
+
+    user["password_hash"] = generate_password_hash(new_password)
+    user["updated_at"] = iso_now()
+    server.upsert_auth_user(user)
+
+    revoked = server.revoke_other_auth_sessions(
+        str(user.get("username") or ""),
+        auth_context["token_hash"],
+        iso_now(),
+    )
+
+    return jsonify(success_payload(
+        request_id,
+        message="密码已更新，其他设备需重新登录",
+        revoked_sessions=revoked,
+        error_code="",
+        error_message="",
+    ))
+
+
+@auth_bp.route("/recovery/issue", methods=["POST"])
+def issue_recovery_code_api():
+    """签发或重发恢复码；旧恢复码立即失效。"""
+    request_id = get_request_id()
+    auth_context = resolve_auth_context(touch=False)
+    if not auth_context:
+        return error_response(request_id, 401, "AUTH_REQUIRED", "请先登录后再生成恢复码")
+
+    username = str((auth_context.get("user") or {}).get("username") or "")
+    code = auth_credentials.issue(username)
+    if not code:
+        return error_response(request_id, 500, "RECOVERY_ISSUE_FAILED", "生成恢复码失败，请稍后重试")
+
+    return jsonify(success_payload(
+        request_id,
+        message="恢复码已生成，旧恢复码立即失效",
+        recovery_code=code,
+        error_code="",
+        error_message="",
+    ))
+
+
+@auth_bp.route("/recovery/reset", methods=["POST"])
+def reset_password_with_recovery_api():
+    """凭恢复码重置密码，无需登录。重置后旧会话全部失效。"""
+    server = _server()
+    request_id = get_request_id()
+    data = request.get_json(silent=True) or {}
+    username = normalize_auth_username(data.get("username"))
+    recovery_code = str(data.get("recovery_code") or "")
+    new_password = str(data.get("new_password") or "")
+
+    if not username:
+        return error_response(request_id, 400, "INVALID_INPUT", "请输入账号")
+
+    strength_error = validate_password_strength(new_password)
+    if strength_error:
+        return error_response(request_id, 400, "WEAK_PASSWORD", strength_error)
+
+    user = server.get_auth_user(username)
+    if not user:
+        # 不区分「账号不存在」与「恢复码错误」，避免账号枚举
+        return error_response(request_id, 400, "RECOVERY_FAILED", "账号或恢复码不正确")
+
+    ok, message = auth_credentials.verify(username, recovery_code)
+    if not ok:
+        return error_response(request_id, 400, "RECOVERY_FAILED", message)
+
+    user["password_hash"] = generate_password_hash(new_password)
+    user["updated_at"] = iso_now()
+    server.upsert_auth_user(user)
+
+    revoked = server.revoke_other_auth_sessions(username, "", iso_now())
+    new_code = auth_credentials.issue(username)
+    clear_login_failures(username)
+
+    return jsonify(success_payload(
+        request_id,
+        message="密码已重置，请使用新密码登录",
+        revoked_sessions=revoked,
+        recovery_code=new_code,
+        error_code="",
+        error_message="",
+    ))
+
+
+# ===== 登录设备管理 =====
+
+def _is_session_active(item, now):
+    if not isinstance(item, dict):
+        return False
+    if item.get("revoked_at"):
+        return False
+    expires_at = item.get("expires_at")
+    if not expires_at:
+        return True
+    try:
+        return datetime.fromisoformat(expires_at) > now
+    except Exception:
+        return True
+
+
+@auth_bp.route("/sessions", methods=["GET"])
+def list_auth_sessions_api():
+    """列出当前账号的活跃登录设备。"""
+    server = _server()
+    request_id = get_request_id()
+    auth_context = resolve_auth_context(touch=False)
+    if not auth_context:
+        return error_response(request_id, 401, "AUTH_REQUIRED", "请先登录后再查看登录设备")
+
+    username = str((auth_context.get("user") or {}).get("username") or "")
+    current_hash = auth_context["token_hash"]
+    now = utcnow()
+
+    sessions = []
+    for item in server.list_auth_sessions(username) or []:
+        if not _is_session_active(item, now):
+            continue
+        sessions.append({
+            "session_id": item.get("session_id"),
+            "created_at": item.get("created_at"),
+            "last_seen_at": item.get("last_seen_at"),
+            "expires_at": item.get("expires_at"),
+            "current": str(item.get("token_hash") or "") == current_hash,
+        })
+
+    sessions.sort(key=lambda row: str(row.get("last_seen_at") or ""), reverse=True)
+
+    return jsonify(success_payload(
+        request_id,
+        message="",
+        sessions=sessions,
+        total=len(sessions),
+        error_code="",
+        error_message="",
+    ))
+
+
+@auth_bp.route("/sessions/revoke", methods=["POST"])
+def revoke_auth_sessions_api():
+    """退出指定设备，或一次性退出其他所有设备。"""
+    server = _server()
+    request_id = get_request_id()
+    auth_context = resolve_auth_context(touch=False)
+    if not auth_context:
+        return error_response(request_id, 401, "AUTH_REQUIRED", "请先登录后再操作")
+
+    data = request.get_json(silent=True) or {}
+    username = str((auth_context.get("user") or {}).get("username") or "")
+    current_hash = auth_context["token_hash"]
+
+    if data.get("all_others"):
+        revoked = server.revoke_other_auth_sessions(username, current_hash, iso_now())
+        return jsonify(success_payload(
+            request_id,
+            message=f"已退出其他 {revoked} 个设备",
+            revoked=revoked,
+            error_code="",
+            error_message="",
+        ))
+
+    session_id = str(data.get("session_id") or "").strip()
+    if not session_id:
+        return error_response(request_id, 400, "INVALID_INPUT", "请选择要退出的设备")
+
+    target = None
+    for item in server.list_auth_sessions(username) or []:
+        if str(item.get("session_id") or "") == session_id:
+            target = item
+            break
+
+    if not target:
+        return error_response(request_id, 404, "SESSION_NOT_FOUND", "该设备不存在或已退出")
+    if str(target.get("token_hash") or "") == current_hash:
+        return error_response(request_id, 400, "INVALID_INPUT", "退出当前设备请使用退出登录")
+
+    server.revoke_auth_session(str(target.get("token_hash") or ""), iso_now())
+
+    return jsonify(success_payload(
+        request_id,
+        message="该设备已退出",
+        revoked=1,
         error_code="",
         error_message="",
     ))

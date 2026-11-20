@@ -9,11 +9,19 @@ services:
       dockerfile: deploy/Dockerfile
       args:
         PREFETCH_EMBEDDING_MODEL: "${PREFETCH_EMBEDDING_MODEL:-true}"
+        # 2C2G 等低内存机型设 LITE_MODE=true，跳过 torch 与 BGE 模型
+        LITE_MODE: "${LITE_MODE:-false}"
         PIP_INDEX_URL: "${PIP_INDEX_URL:-https://repo.huaweicloud.com/repository/pypi/simple}"
         TORCH_INDEX_URL: "${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cpu}"
         HF_ENDPOINT: "${HF_ENDPOINT:-https://hf-mirror.com}"
     image: fzg-app:${FZG_TAG:-latest}
     restart: unless-stopped
+    # 小磁盘机型必须限制日志，否则 json-file 会持续增长
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     env_file:
       - .env
     environment:
@@ -37,6 +45,11 @@ services:
   nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "${HOST_PORT:-80}:80"
     volumes:
@@ -53,6 +66,11 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
     volumes:
       - fzg-redis:/data

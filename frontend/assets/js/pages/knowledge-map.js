@@ -194,6 +194,47 @@
     if (dom.nodeInsight) {
       dom.nodeInsight.textContent = buildNodeInsight(node);
     }
+    syncNodeSpeakButton(node);
+  }
+
+  /**
+   * 朗读按钮直接读已渲染到面板上的文字，避免与展示内容出现两份口径。
+   * 浏览器不支持语音合成时保持隐藏。
+   */
+  function syncNodeSpeakButton(node) {
+    const button = document.getElementById('nodeSpeakBtn');
+    if (!button) return;
+
+    const supported = !!(window.SpeechPlayer
+      && window.SpeechPlayer.isSupported
+      && window.SpeechPlayer.isSupported());
+
+    if (!supported || !node) {
+      button.hidden = true;
+      button.removeAttribute('data-speak-text');
+      return;
+    }
+
+    const nameText = String((dom.nodeName && dom.nodeName.textContent) || '').trim();
+    const descText = String((dom.nodeDesc && dom.nodeDesc.textContent) || '').trim();
+    const masteryText = String((dom.nodeMastery && dom.nodeMastery.textContent) || '').trim();
+    const insightText = String((dom.nodeInsight && dom.nodeInsight.textContent) || '').trim();
+
+    const text = [
+      nameText ? `知识点：${nameText}` : '',
+      descText && descText !== '-' ? `描述：${descText}` : '',
+      masteryText && masteryText !== '-' ? `掌握度：${masteryText}` : '',
+      insightText ? `学习建议：${insightText}` : ''
+    ].filter(Boolean).join('。');
+
+    if (!text) {
+      button.hidden = true;
+      button.removeAttribute('data-speak-text');
+      return;
+    }
+
+    button.setAttribute('data-speak-text', text);
+    button.hidden = false;
   }
 
   function clearSelectedNode() {
@@ -208,6 +249,7 @@
     if (dom.nodeInsight) {
       dom.nodeInsight.textContent = buildNodeInsight(null);
     }
+    syncNodeSpeakButton(null);
   }
 
   function renderStats(nodes, links) {

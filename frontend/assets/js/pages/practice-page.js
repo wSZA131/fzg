@@ -34,8 +34,21 @@
     timerStartedAt: 0,
     timerId: 0,
     currentUserId: '',
-    sidebarCollapsed: false
+    sidebarCollapsed: false,
+    materialPoints: [],
+    selectedMaterialPoint: null,
+    materialStats: { itemTotal: 0, textReady: 0 }
   };
+
+  function buildMaterialEmptyText() {
+    if (state.materialStats.itemTotal > 0 && state.materialStats.textReady === 0) {
+      return `已上传 ${state.materialStats.itemTotal} 份资料，但还没有可提取的文字内容（图片需要可用的 OCR 服务）。请上传 TXT、PDF、DOCX 等文本资料，或直接在「粘贴」里录入文字。`;
+    }
+    if (state.materialStats.textReady > 0) {
+      return '资料已提取到文字，但还没有结构化知识点。可以继续用「上传/粘贴」补充更系统的笔记，或直接在下方填写知识点开始练习。';
+    }
+    return '还没有可用的资料知识点，先去「添加内容」上传资料，系统会自动抽取知识点。';
+  }
 
   function getUserId() {
     return window.UserContext && typeof window.UserContext.getUserId === 'function'
@@ -453,6 +466,23 @@
     };
   }
 
+  function applyUrlSetup() {
+    let params = null;
+    try {
+      params = new URLSearchParams(window.location.search || '');
+    } catch (error) {
+      params = null;
+    }
+    if (!params) return;
+    const concept = String(params.get('concept') || '').trim();
+    if (!concept) return;
+    const conceptInput = document.getElementById('practiceConcept');
+    if (!conceptInput) return;
+    conceptInput.value = concept;
+    saveSetup();
+    setSetupNote(`已从资料知识点带入「${concept}」，选择题量后即可开始练习。`);
+  }
+
   function applySetup(config) {
     const setup = Object.assign(getDefaultSetup(), config || {});
     const concept = document.getElementById('practiceConcept');
@@ -648,6 +678,164 @@
     }
     saveSetup();
     startPractice(config);
+  }
+
+  /* ---------------- 资料知识点（上传资料驱动出题） ---------------- */
+
+  function setMaterialHint(text, isError) {
+    const hint = document.getElementById('practiceMaterialHint');
+    if (!hint) return;
+    hint.textContent = text;
+    hint.style.color = isError ? '#b42318' : '';
+  }
+
+  function renderMaterialChips() {
+    const chips = document.getElementById('practiceMaterialChips');
+    const generateBtn = document.getElementById('practiceMaterialGenerateBtn');
+    if (!chips) return;
+
+    if (!state.materialPoints.length) {
+      chips.innerHTML = `<span class="practice-material-empty">${escapeHtml(buildMaterialEmptyText())}</span>`;
+      if (generateBtn) generateBtn.hidden = true;
+      return;
+    }
+
+    chips.innerHTML = state.materialPoints.map(function (point, index) {
+      const active = state.selectedMaterialPoint && state.selectedMaterialPoint.id === point.id;
+      return `<button type="button" class="practice-material-chip ${active ? 'is-active' : ''}" data-material-point="${index}" title="${escapeHtml(point.detail || point.title || '')}">${escapeHtml(point.title || '未命名知识点')}</button>`;
+    }).join('');
+
+    if (generateBtn) {
+      generateBtn.hidden = !state.selectedMaterialPoint;
+      generateBtn.textContent = state.selectedMaterialPoint
+        ? `用「${state.selectedMaterialPoint.title}」出题并开始`
+        : '用该知识点出题并开始';
+    }
+  }
+
+  async function loadMaterialKnowledgePoints(silent) {
+    const block = document.getElementById('practiceMaterialBlock');
+    const chips = document.getElementById('practiceMaterialChips');
+    if (!block || !chips) return;
+    block.hidden = false;
+    if (!silent) {
+      setMaterialHint('正在读取上传资料的知识点…');
+    }
+
+    try {
+      const params = new URLSearchParams({ user_id: getUserId(), limit: '24' });
+      const response = await fetch(`${API_BASE}/api/spaces/knowledge-points?${params.toString()}`, {
+        headers: { Accept: 'application/json' }
+      });
+      const data = await parseApiResponse(response);
+      const points = Array.isArray(data.points) ? data.points : [];
+      state.materialPoints = points.map(function (point) {
+        return {
+          id: String(point.id || point.title || ''),
+          title: String(point.title || '').trim(),
+          detail: String(point.detail || '').trim(),
+          itemId: String(point.itemId || ''),
+          itemName: String(point.itemName || ''),
+          spaceId: String(point.spaceId || '')
+        };
+      }).filter(function (point) { return point.title; });
+      if (state.selectedMaterialPoint) {
+        const matched = state.materialPoints.find(function (point) {
+          return point.id === state.selectedMaterialPoint.id;
+        });
+        state.selectedMaterialPoint = matched || null;
+      }
+      state.materialStats = {
+        itemTotal: Number(data.item_total) || 0,
+        textReady: Number(data.text_ready) || 0
+      };
+      setMaterialHint(state.materialPoints.length
+        ? `已抽取 ${state.materialPoints.length} 个资料知识点，点击即可用于出题`
+        : (state.materialStats.itemTotal > 0 && state.materialStats.textReady === 0
+            ? `已上传 ${state.materialStats.itemTotal} 份资料，但还没有可提取的文字内容（图片需要可用的 OCR 服务）`
+            : (state.materialStats.textReady > 0
+                ? `已提取到 ${state.materialStats.textReady} 份资料的文字，但未识别到结构化知识点`
+                : '还没有可用的资料知识点，先去「添加内容」上传资料')));
+      renderMaterialChips();
+    } catch (error) {
+      state.materialPoints = [];
+      const reason = (error && error.message) ? String(error.message) : '';
+      setMaterialHint(
+        reason
+          ? `资料知识点读取失败：${reason}（请确认后端服务已启动并重启过）`
+          : '资料知识点读取失败，请稍后刷新重试',
+        true
+      );
+      renderMaterialChips();
+    }
+  }
+
+  function selectMaterialPoint(index) {
+    const point = state.materialPoints[Number(index)];
+    if (!point) return;
+    state.selectedMaterialPoint = point;
+    const conceptInput = document.getElementById('practiceConcept');
+    if (conceptInput) conceptInput.value = point.title;
+    renderMaterialChips();
+    saveSetup();
+    setMaterialHint(point.itemName
+      ? `已选择「${point.title}」，来源：${point.itemName}`
+      : `已选择「${point.title}」`);
+  }
+
+  async function generatePracticeFromMaterial() {
+    const point = state.selectedMaterialPoint;
+    if (!point) {
+      setMaterialHint('请先点击一个资料知识点', true);
+      return;
+    }
+    if (state.busy) return;
+
+    const generateBtn = document.getElementById('practiceMaterialGenerateBtn');
+    const config = readSetupForm();
+    const count = Math.max(1, Math.min(10, Number(config.count) || 5));
+    const difficulty = config.difficulty || '';
+
+    if (generateBtn) {
+      generateBtn.disabled = true;
+      generateBtn.textContent = '正在根据资料出题…';
+    }
+    setMaterialHint(`正在根据「${point.title}」生成练习题…`);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/question_bank/generate_from_material`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          user_id: getUserId(),
+          item_id: point.itemId,
+          space_id: point.spaceId,
+          knowledge_point: point.title,
+          difficulty: difficulty,
+          count: count
+        })
+      });
+      const data = await parseApiResponse(response);
+      const concept = String(data.concept || point.title || '').trim();
+      const conceptInput = document.getElementById('practiceConcept');
+      if (conceptInput) conceptInput.value = concept;
+      saveSetup();
+      setMaterialHint(`已根据资料生成 ${Number(data.generated_count) || 0} 道题目，正在开始练习…`);
+      await startPractice({
+        concept: concept,
+        scope: 'both',
+        count: count,
+        difficulty: difficulty,
+        type: 'mixed'
+      });
+    } catch (error) {
+      setMaterialHint(withSuggestion('资料出题失败', error, '请确认资料已上传成功后再试'), true);
+    } finally {
+      if (generateBtn) {
+        generateBtn.disabled = false;
+      }
+      renderMaterialChips();
+    }
   }
 
   /* ---------------- 题目渲染 ---------------- */
@@ -1130,9 +1318,40 @@
     session.elapsedSeconds = getElapsedSeconds();
     stopTimer();
     saveHistory();
+    void syncPracticeSession(session);
     renderSidebarHistory();
     renderResult();
     showView('result');
+  }
+
+  /* 练习汇总上报：本地仍是主存储，服务端留档用于跨设备追溯与统计。 */
+  async function syncPracticeSession(session) {
+    if (!session || !API_BASE) return;
+    try {
+      const response = await fetch(`${API_BASE}/api/question_bank/practice-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          user_id: getUserId(),
+          session: {
+            id: session.id,
+            title: session.title,
+            concept: session.concept,
+            scope: session.scope,
+            difficulty: session.difficulty,
+            items: session.items,
+            answers: session.answers,
+            elapsedSeconds: session.elapsedSeconds,
+            completedAt: session.completedAt
+          }
+        })
+      });
+      if (typeof parseApiResponse === 'function') {
+        await parseApiResponse(response);
+      }
+    } catch (error) {
+      // 上报失败不阻断本地结果页，用户仍能看到本次成绩。
+    }
   }
 
   /* ---------------- 结果页 ---------------- */
@@ -1219,14 +1438,30 @@
     renderMath(reviewList);
   }
 
-  function retryWrongQuestions() {
+  async function retryWrongQuestions() {
     const session = state.practice;
     if (!session) return;
-    const wrongItems = session.items.filter(function (item) {
+
+    let wrongItems = session.items.filter(function (item) {
       const answer = session.answers[item.id];
       return !answer || !answer.correct;
     });
-    if (!wrongItems.length) return;
+    let titleSuffix = '错题重练';
+
+    // 当前会话没有错题时，回退到服务端历史错题库（此前只在当前会话内筛选）
+    if (!wrongItems.length) {
+      setSetupNote('正在从错题库加载历史错题…');
+      const records = await fetchWrongQuestionsFromServer();
+      wrongItems = buildItemsFromWrongQuestions(records);
+      titleSuffix = '历史错题重练';
+
+      if (!wrongItems.length) {
+        setSetupNote('错题库中还没有可重练的题目，先做几道题吧。', true);
+        window.alert('错题库中还没有可重练的题目。');
+        return;
+      }
+      setSetupNote(`已从错题库载入 ${wrongItems.length} 道历史错题。`);
+    }
 
     const config = {
       concept: `${session.concept || '综合'} · 错题`,
@@ -1236,12 +1471,58 @@
       count: wrongItems.length
     };
     const nextSession = createSession(config, wrongItems.map(function (item) { return Object.assign({}, item); }));
-    nextSession.title = `${session.concept || '综合'} · 错题重练`;
+    nextSession.title = `${session.concept || '综合'} · ${titleSuffix}`;
     state.timerBase = 0;
     activateSession(nextSession);
     showView('question');
     renderQuestion();
     startTimer();
+  }
+
+  async function fetchWrongQuestionsFromServer() {
+    if (!API_BASE) return [];
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/wrong_questions?user_id=${encodeURIComponent(getUserId())}`,
+        { headers: { Accept: 'application/json' } }
+      );
+      const data = await parseApiResponse(response);
+      return Array.isArray(data.items) ? data.items : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  /**
+   * 历史错题只保存了题干与参考答案，没有选项。
+   * 统一按解答题重练，避免渲染出空选项；判分走主观题要点覆盖。
+   */
+  function buildItemsFromWrongQuestions(records) {
+    const seen = new Set();
+    const items = [];
+
+    (Array.isArray(records) ? records : []).forEach(function (record, index) {
+      if (!record || !record.question) return;
+
+      const dedupeKey = String(record.question_id || record.question).trim();
+      if (!dedupeKey || seen.has(dedupeKey)) return;
+      seen.add(dedupeKey);
+
+      items.push({
+        id: `wrong_${record.question_id || record.id || index}`,
+        question_id: String(record.question_id || ''),
+        question: String(record.question || ''),
+        concept: String(record.concept || '错题'),
+        difficulty: String(record.difficulty || 'medium'),
+        question_type: 'short_answer',
+        options: [],
+        answer: String(record.expected_answer || ''),
+        source: 'wrong_question',
+        previous_answer: String(record.user_answer || '')
+      });
+    });
+
+    return items.slice(0, 10);
   }
 
   function restartPractice() {
@@ -1267,6 +1548,7 @@
     renderSidebarHistory();
     renderResumeButton();
     showView('setup');
+    loadMaterialKnowledgePoints(true);
   }
 
   /* ---------------- 继续练习 ---------------- */
@@ -1607,6 +1889,33 @@
           startPracticeFromForm();
         }
       });
+      conceptInput.addEventListener('input', function () {
+        if (!state.selectedMaterialPoint) return;
+        if (conceptInput.value.trim() === state.selectedMaterialPoint.title) return;
+        state.selectedMaterialPoint = null;
+        renderMaterialChips();
+      });
+    }
+
+    const materialChips = document.getElementById('practiceMaterialChips');
+    if (materialChips) {
+      materialChips.addEventListener('click', function (event) {
+        const chip = event.target && event.target.closest ? event.target.closest('[data-material-point]') : null;
+        if (!chip) return;
+        selectMaterialPoint(chip.getAttribute('data-material-point'));
+      });
+    }
+
+    const materialRefreshBtn = document.getElementById('practiceMaterialRefreshBtn');
+    if (materialRefreshBtn) {
+      materialRefreshBtn.addEventListener('click', function () {
+        loadMaterialKnowledgePoints(false);
+      });
+    }
+
+    const materialGenerateBtn = document.getElementById('practiceMaterialGenerateBtn');
+    if (materialGenerateBtn) {
+      materialGenerateBtn.addEventListener('click', generatePracticeFromMaterial);
     }
 
     document.addEventListener('keydown', function (event) {
@@ -1660,10 +1969,12 @@
     loadHistory();
     renderSidebarHistory();
     restoreSetup();
+    applyUrlSetup();
     bindEvents();
     initQuestionBankModal();
     renderResumeButton();
     showView('setup');
+    loadMaterialKnowledgePoints(true);
 
     if (window.PageShell && typeof window.PageShell.initGlobalSidebar === 'function') {
       window.PageShell.initGlobalSidebar();

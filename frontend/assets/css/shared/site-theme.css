@@ -706,7 +706,7 @@ button.global-sidebar-link {
 
 .entry-example-row {
   width: min(100%, 920px);
-  margin: 20px auto 0;
+  margin: 20px auto 32px;
   gap: 8px;
 }
 

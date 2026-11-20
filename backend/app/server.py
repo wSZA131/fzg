@@ -56,6 +56,7 @@ from .services.document_ingest import (
 from .services.knowledge_base import get_kb_readiness_report, invalidate_user_kb_cache
 from .services.neo4j_store import Neo4jGraphStore
 from .services.ocr_service import extract_text_from_image as extract_text_from_image_service
+from .services.ocr_service import local_ocr_available as is_local_ocr_available
 from .api.agent_routes import agent_bp
 import logging
 import time
@@ -109,6 +110,7 @@ from .api.question_bank import question_bank_bp
 from .api.knowledge_graph import knowledge_graph_bp
 from .api.plans import plans_bp
 from .api.diagnosis import diagnosis_bp, wrong_questions_bp
+from .api.observability import observability_bp
 from .utils.http import (
     error_response,
     get_request_id,
@@ -165,6 +167,27 @@ app.register_blueprint(knowledge_graph_bp)
 app.register_blueprint(plans_bp)
 app.register_blueprint(diagnosis_bp)
 app.register_blueprint(wrong_questions_bp)
+app.register_blueprint(observability_bp)
+
+
+@app.before_request
+def enforce_rate_limit():
+    """按接口成本分桶限流；RATE_LIMIT_ENABLED=false 时为零开销直通。"""
+    from .services.rate_limit import check_request
+
+    allowed, retry_after, bucket = check_request(request.path)
+    if allowed:
+        return None
+
+    response = jsonify({
+        "success": False,
+        "error_code": "RATE_LIMITED",
+        "error_message": "请求过于频繁，请稍后重试",
+        "bucket": bucket,
+    })
+    response.status_code = 429
+    response.headers["Retry-After"] = str(max(1, int(retry_after + 0.999)))
+    return response
 
 TASK_META = {}
 TASK_META_MAX_SIZE = 500
@@ -994,8 +1017,10 @@ from .services.database import (
     append_user_event as db_append_user_event,
     get_storage_info,
     init_storage,
+    list_auth_sessions,
     load_json,
     revoke_auth_session,
+    revoke_other_auth_sessions,
     save_json,
     touch_auth_session,
     upsert_auth_session,
@@ -1298,6 +1323,44 @@ def upsert_user_concept(concept_list, concept, mastery=0.35):
         "last_reviewed": None
     })
     return True
+
+
+def register_material_concepts(user_id, concepts, mastery=0.3):
+    """把上传资料抽取出的知识点并入用户知识库，供知识图谱/题库/仪表盘复用。
+
+    只做轻量的规则入库，不调用大模型，保证上传接口的响应时间。
+    """
+    normalized_user = normalize_request_user_id(user_id, fallback="")
+    if not normalized_user:
+        return {"added": 0, "concepts": []}
+
+    raw_concepts = [
+        normalize_concept_name(item)
+        for item in (concepts if isinstance(concepts, list) else [])
+        if normalize_concept_name(item)
+    ]
+    if not raw_concepts:
+        return {"added": 0, "concepts": []}
+
+    user_knowledge = normalize_user_knowledge(get_user_knowledge(normalized_user))
+    blocked_topics = {
+        normalize_concept_name(item)
+        for item in (user_knowledge.get("deleted_concepts") or [])
+        if normalize_concept_name(item)
+    }
+    candidates = filter_learning_topics(raw_concepts, blocked_topics=blocked_topics, limit=8)
+    if not candidates:
+        return {"added": 0, "concepts": []}
+
+    concept_list = user_knowledge["concepts"]
+    added = 0
+    for concept in candidates:
+        if upsert_user_concept(concept_list, concept, mastery=mastery):
+            added += 1
+
+    user_knowledge["concepts"] = concept_list
+    set_user_knowledge(normalized_user, user_knowledge)
+    return {"added": added, "concepts": candidates}
 
 
 def detect_concepts_from_text(text):
@@ -2059,6 +2122,22 @@ def extract_topics_from_content_item(item, detect_topics_fn=None):
 def extract_topics_from_space_item(item, detect_topics_fn=None):
     if not isinstance(item, dict):
         return []
+
+    # 优先使用上传时抽取出的知识点标题，让仪表盘反映资料真实知识点，
+    # 而不是只有少量粗粒度主题词。
+    knowledge_points = item.get("knowledgePoints")
+    if isinstance(knowledge_points, list):
+        point_titles = []
+        for point in knowledge_points:
+            if isinstance(point, dict):
+                raw_title = str(point.get("title") or "").strip()
+            else:
+                raw_title = str(point or "").strip()
+            if 2 <= len(raw_title) <= 24:
+                point_titles.append(normalize_concept_name(raw_title))
+        point_titles = [title for title in point_titles if title]
+        if point_titles:
+            return normalize_topic_list(point_titles)[:6]
 
     topics = normalize_topic_list(item.get("topics"))
     if topics:
@@ -3630,14 +3709,18 @@ def generate_official_questions_fallback(concept, difficulty, count, preferred_t
     return prioritized[:target]
 
 
-def generate_official_questions_with_ai(concept, difficulty, count, preferred_type=""):
+def generate_official_questions_with_ai(concept, difficulty, count, preferred_type="", material_context=""):
     cfg = get_ai_runtime_config()
     target_count = max(1, min(10, int(count or 3)))
     level = (difficulty or "medium").strip().lower()
     concept_text = normalize_concept_name(concept or "")
     preferred_type = normalize_question_type(preferred_type) if preferred_type else ""
+    material_text = str(material_context or "").strip()[:4000]
 
     if not USE_REAL_AI or not str(cfg.get("api_key") or "").strip():
+        if material_text:
+            # 资料出题在没有 AI 时交由调用方按知识点本地组题。
+            return [], "material_unavailable"
         return generate_official_questions_fallback(concept_text, level, target_count, preferred_type), "fallback"
 
     try:
@@ -3651,7 +3734,31 @@ def generate_official_questions_with_ai(concept, difficulty, count, preferred_ty
             if preferred_type
             else f"question_type 可为 single_choice、multiple_choice、fill_blank、short_answer；{type_variety_rule}"
         )
-        prompt = f"""
+        if material_text:
+            prompt = f"""
+你是学习题库生成器。下面是一份学习资料节选及其知识点，请据此生成 {target_count} 道题目，并只返回 JSON。
+
+要求：
+1) concept 优先使用知识点名称，优先取“{concept_text or '资料中的知识点'}”；difficulty 使用“{level if level in QUESTION_DIFFICULTY else 'medium'}”。
+2) {type_requirement}
+3) 题目必须能被资料内容支撑，不要引入资料之外的事实或偏题。
+4) 题型示例：single_choice 给 4 个 options 且 answer 为 1 个字母；multiple_choice 给 4 个 options 且 answer 为 2-3 个字母；fill_blank 用 ____ 表示空白且不填 options；short_answer 不填 options，answer 给标准要点。
+5) analysis 必须说明依据资料中的哪一处内容，可读、简洁。
+6) 必须返回合法 JSON，不要解释文本。
+
+学习资料节选：
+{material_text}
+
+格式示例：
+{{
+  "questions": [
+    {{"concept":"知识点","difficulty":"medium","question_type":"single_choice","question":"...","options":["A...","B...","C...","D..."],"answer":"A","analysis":"..."}},
+    {{"concept":"知识点","difficulty":"medium","question_type":"short_answer","question":"...","options":[],"answer":"...","analysis":"..."}}
+  ]
+}}
+"""
+        else:
+            prompt = f"""
 你是数学题库生成器。请生成 {target_count} 道题目，并只返回 JSON。
 
 要求：
@@ -3719,9 +3826,13 @@ def generate_official_questions_with_ai(concept, difficulty, count, preferred_ty
                 break
 
         if results:
-            return results, "ai"
+            return results, "ai" if not material_text else "ai_material"
+        if material_text:
+            return [], "material_fallback"
         return generate_official_questions_fallback(concept_text, level, target_count, preferred_type), "fallback"
     except Exception:
+        if material_text:
+            return [], "material_fallback"
         return generate_official_questions_fallback(concept_text, level, target_count, preferred_type), "fallback"
 
 
@@ -5719,6 +5830,7 @@ def health():
         "ai_enabled": USE_REAL_AI,
         "local_demo_fallback_enabled": LOCAL_DEMO_FALLBACK_ENABLED,
         "ocr_provider": OCR_PROVIDER,
+        "ocr_local_available": is_local_ocr_available(),
         "neo4j_enabled": neo4j_available,
         "neo4j_error": neo4j_error,
         "graph_primary": GRAPH_PRIMARY,

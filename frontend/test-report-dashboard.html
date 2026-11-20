@@ -1,13 +1,28 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script>
+        /* 主题需在首屏渲染前生效，避免深色模式闪白 */
+        (function () {
+            try {
+                if (window.localStorage.getItem('fangzhigong_theme_pref') === 'dark') {
+                    document.documentElement.setAttribute('data-fangzhigong-theme', 'dark');
+                    document.documentElement.style.colorScheme = 'dark';
+                }
+            } catch (error) { /* 隐私模式下 localStorage 不可用 */ }
+        })();
+    </script>
+
     <link rel="icon" type="image/svg+xml" href="assets/images/app-icon.svg">
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/images/app-icon-192.png">
   <title>测试报告仪表盘 - 坊知工</title>
-  <link rel="stylesheet" href="assets/css/shared/auth-ui.css?v=20260512-auth-modal-scrollbarhide-v3">
+  <link rel="stylesheet" href="assets/css/shared/auth-ui.css?v=20261119-auth-v4">
   <link rel="stylesheet" href="assets/css/pages/test-report-dashboard.css">
-  <link rel="stylesheet" href="assets/css/shared/site-theme.css?v=20261113-brand-icon-v2">
+  <link rel="stylesheet" href="assets/css/shared/site-theme.css?v=20261115-knowledge-v1">
 </head>
 <body id="test-dashboard-page">
   <div class="page-wrap">

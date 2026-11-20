@@ -1856,6 +1856,20 @@
       }
     }
 
+    // 朗读入口只在浏览器原生支持 SpeechSynthesis 时出现，避免出现点了没反应的按钮
+    const speechSupported = !!(window.SpeechPlayer && window.SpeechPlayer.isSupported && window.SpeechPlayer.isSupported());
+    if (sender === 'ai' && speechSupported && opts.speakable !== false) {
+      const actions = document.createElement('div');
+      actions.className = 'message-actions';
+      actions.innerHTML = `
+        <button type="button" class="message-action-btn" data-speak-toggle aria-pressed="false" aria-label="朗读这段内容">
+          <span class="message-action-icon" aria-hidden="true">▶</span>
+          <span class="message-action-label">朗读</span>
+        </button>
+      `;
+      bubble.appendChild(actions);
+    }
+
     const metaItems = [];
     // 只要携带结构化证据/元信息就展示，避免智能体返回的 tool_calls、知识库命中被静默丢弃。
     const hasStructuredMeta = !!(opts.evidence || opts.meta);

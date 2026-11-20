@@ -1,9 +1,28 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script>
+        /* 主题需在首屏渲染前生效，避免深色模式闪白 */
+        (function () {
+            try {
+                if (window.localStorage.getItem('fangzhigong_theme_pref') === 'dark') {
+                    document.documentElement.setAttribute('data-fangzhigong-theme', 'dark');
+                    document.documentElement.style.colorScheme = 'dark';
+                }
+            } catch (error) { /* 隐私模式下 localStorage 不可用 */ }
+        })();
+    </script>
+
     <link rel="icon" type="image/svg+xml" href="assets/images/app-icon.svg">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="坊知工">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="assets/images/app-icon-192.png">
+    <link rel="stylesheet" href="assets/css/shared/mobile-shell.css?v=20261118-mobile-v1">
     <title>坊知工</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,7 +30,7 @@
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@600;700;900&display=swap" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@600;700;900&display=swap"></noscript>
     <link rel="stylesheet" href="assets/css/pages/home-page.css?v=20261114-plan-drawer-v1">
-    <link rel="stylesheet" href="assets/css/shared/auth-ui.css?v=20260512-auth-modal-scrollbarhide-v3">
+    <link rel="stylesheet" href="assets/css/shared/auth-ui.css?v=20261119-auth-v4">
     <link rel="preload" as="style" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"></noscript>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
@@ -1979,6 +1998,53 @@
             min-height: 20px;
             font-size: 13px;
             color: #334155;
+            line-height: 1.6;
+        }
+
+        .entry-action-points {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .entry-action-points-label {
+            color: #64748b;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .entry-action-point {
+            padding: 3px 9px;
+            border: 1px solid #dbe5ef;
+            border-radius: 999px;
+            background: #f8fbff;
+            color: #31536f;
+            font-size: 12px;
+        }
+
+        .entry-action-points-empty {
+            margin-top: 6px;
+            color: #8a94a6;
+            font-size: 12px;
+        }
+
+        .entry-action-practice-link {
+            display: inline-flex;
+            align-items: center;
+            margin-top: 10px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: #171717;
+            color: #ffffff;
+            font-size: 12.5px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .entry-action-practice-link:hover {
+            background: #000000;
         }
 
         .entry-action-footer {
@@ -3216,7 +3282,7 @@
         @media (max-width: 900px) { .entry-input-wrap::before { display:none; } }
         .entry-example-row {
             display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
-            width: min(100%, var(--entry-content-width)); margin: 18px auto 0;
+            width: min(100%, var(--entry-content-width)); margin: 18px auto 32px;
         }
         .entry-example-label { color: #64748b; font-size: 13px; font-weight: 700; }
         .entry-example-chip {
@@ -3226,7 +3292,7 @@
         }
         .entry-example-chip:hover { border-color: #9dc5e8; color: #1168b5; background: #f5fbff; }
     </style>
-    <link rel="stylesheet" href="assets/css/shared/site-theme.css?v=20261114-explore-recs-v1">
+    <link rel="stylesheet" href="assets/css/shared/site-theme.css?v=20261115-knowledge-v1">
     <link rel="stylesheet" href="assets/css/shared/attachment-ui.css?v=20261113-attachment-v2">
 </head>
 <body>
@@ -3279,6 +3345,7 @@
     <div class="app-container">
         <!-- 顶部导航 -->
         <nav class="navbar">
+            <div class="page-streak-dock" id="globalStreakDock"></div>
             <div class="navbar-brand-shell">
                 <div class="logo-panel">
                     <div class="logo" aria-label="坊知工 智能学习伴侣">
@@ -3672,12 +3739,13 @@
         </div>
     </div>
 
-    <script src="assets/js/shared/user-context.js?v=20260330-authfix"></script>
+    <script src="assets/js/shared/user-context.js?v=20261119-auth-v4"></script>
     <script src="assets/js/shared/api-utils.js?v=20260511-auth-dup-check"></script>
     <script src="assets/js/shared/project-local-data.js?v=20260330-authfix"></script>
-    <script src="assets/js/shared/space-cloud-store.js?v=20260403-sidebarspaces"></script>
-    <script src="assets/js/shared/auth-ui.js?v=20260512-auth-register-autofill-fix"></script>
-    <script src="assets/js/shared/page-shell.js?v=20261113-graph-merge"></script>
+    <script src="assets/js/shared/space-cloud-store.js?v=20261118-search-v1"></script>
+    <script src="assets/js/shared/i18n.js?v=20261119-i18n-v2"></script>
+    <script src="assets/js/shared/auth-ui.js?v=20261119-auth-v4"></script>
+    <script src="assets/js/shared/page-shell.js?v=20261118-mobile-v1"></script>
     <script src="assets/js/shared/attachment-handoff.js?v=20261113-attachment-v1"></script>
     <script>
         const API_BASE = window.ApiUtils.getApiBase();
@@ -4818,7 +4886,8 @@
                 renderEntrySpacesSection();
                 renderAiSpaceItemOptions();
                 renderEntryActionSpaceOptions(activeEntrySpaceId);
-                return { ok: true, space, count: Array.isArray(saved.items) ? saved.items.length : 0 };
+                const addedItems = saved && Array.isArray(saved.items) ? saved.items : [];
+                return { ok: true, space, addedItems, count: addedItems.length };
             } catch (error) {
                 return {
                     ok: false,
@@ -4827,6 +4896,50 @@
                         : '云端保存失败，请稍后重试。'
                 };
             }
+        }
+
+        function collectEntryKnowledgePoints(saved) {
+            const points = [];
+            const seen = new Set();
+            const items = Array.isArray(saved && saved.addedItems) ? saved.addedItems : [];
+            items.forEach(item => {
+                (Array.isArray(item && item.knowledgePoints) ? item.knowledgePoints : []).forEach(point => {
+                    const title = String(point && point.title || point || '').trim();
+                    if (!title || seen.has(title)) return;
+                    seen.add(title);
+                    points.push(title);
+                });
+                if (!Array.isArray(item && item.knowledgePoints) || !item.knowledgePoints.length) {
+                    (Array.isArray(item && item.topics) ? item.topics : []).forEach(topic => {
+                        const title = String(topic || '').trim();
+                        if (!title || seen.has(title)) return;
+                        seen.add(title);
+                        points.push(title);
+                    });
+                }
+            });
+            return points;
+        }
+
+        function renderEntryKnowledgeResult(resultEl, saved, baseText) {
+            if (!resultEl) return;
+            const points = collectEntryKnowledgePoints(saved);
+            const parts = [`<div class="entry-action-result-text">${escapeHtml(baseText)}</div>`];
+            if (points.length) {
+                parts.push(
+                    '<div class="entry-action-points">' +
+                    `<span class="entry-action-points-label">已提取 ${points.length} 个知识点：</span>` +
+                    points.slice(0, 6).map(title => `<span class="entry-action-point">${escapeHtml(title)}</span>`).join('') +
+                    '</div>'
+                );
+                const concept = points[0];
+                parts.push(
+                    `<a class="entry-action-practice-link" href="question-bank.html?concept=${encodeURIComponent(concept)}">用这些知识点开始练习</a>`
+                );
+            } else {
+                parts.push('<div class="entry-action-points-empty">暂未从内容中识别到知识点。若上传的是图片或扫描件，需要可用的 OCR 服务；也可以直接「粘贴」文字后再试。</div>');
+            }
+            resultEl.innerHTML = parts.join('');
         }
 
         function renderEntrySpacesSection() {
@@ -5364,8 +5477,11 @@
                         return;
                     }
 
-                    result.textContent = `已保存到「${targetSpaceName}」：图片 ${imageCount} 个，其他文件 ${otherCount} 个。`;
-                    setTimeout(closeEntryActionModal, 450);
+                    renderEntryKnowledgeResult(
+                        result,
+                        uploadSave,
+                        `已保存到「${targetSpaceName}」：图片 ${imageCount} 个，其他文件 ${otherCount} 个。`
+                    );
                     return;
                 }
 
@@ -5389,8 +5505,7 @@
                         result.textContent = linkSave.message;
                         return;
                     }
-                    result.textContent = `链接已保存到「${targetSpaceName}」。`;
-                    setTimeout(closeEntryActionModal, 450);
+                    renderEntryKnowledgeResult(result, linkSave, `链接已保存到「${targetSpaceName}」。`);
                     return;
                 }
 
@@ -5452,10 +5567,13 @@
                         return;
                     }
 
-                    result.textContent = hasAudio
-                        ? `录音${payloadText ? '与文字记录' : ''}已保存到「${targetSpaceName}」。`
-                        : `讲座记录已保存到「${targetSpaceName}」。`;
-                    setTimeout(closeEntryActionModal, 450);
+                    renderEntryKnowledgeResult(
+                        result,
+                        recordSave,
+                        hasAudio
+                            ? `录音${payloadText ? '与文字记录' : ''}已保存到「${targetSpaceName}」。`
+                            : `讲座记录已保存到「${targetSpaceName}」。`
+                    );
                     return;
                 }
 
@@ -5477,8 +5595,7 @@
                     result.textContent = noteSave.message;
                     return;
                 }
-                result.textContent = `粘贴内容已保存到「${targetSpaceName}」。`;
-                setTimeout(closeEntryActionModal, 450);
+                renderEntryKnowledgeResult(result, noteSave, `粘贴内容已保存到「${targetSpaceName}」。`);
             } catch (error) {
                 result.textContent = withSuggestion('提交失败', error, '请稍后重试');
             } finally {

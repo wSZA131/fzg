@@ -120,3 +120,8 @@ QWEN_VL_MODEL_NAME = os.getenv("QWEN_VL_MODEL_NAME", "qwen-vl-plus")
 GRAPH_PRIMARY = os.getenv("GRAPH_PRIMARY", "auto").strip().lower()  # auto|neo4j|json
 GRAPH_SYNC_MODE = os.getenv("GRAPH_SYNC_MODE", "auto").strip().lower()  # auto|sync|async
 RELATION_MIN_SCORE = float(os.getenv("RELATION_MIN_SCORE", "0.45"))
+
+# ---- 接口限流（公网部署建议开启；本地开发与 CI 默认关闭） ----
+RATE_LIMIT_ENABLED = str(os.getenv("RATE_LIMIT_ENABLED", "false")).strip().lower() == "true"
+RATE_LIMIT_AGENT_TUTOR = max(1, int(os.getenv("RATE_LIMIT_AGENT_TUTOR", "60")))
+RATE_LIMIT_MAX_KEYS = max(256, int(os.getenv("RATE_LIMIT_MAX_KEYS", "5000")))

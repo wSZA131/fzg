@@ -1,9 +1,28 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script>
+        /* 主题需在首屏渲染前生效，避免深色模式闪白 */
+        (function () {
+            try {
+                if (window.localStorage.getItem('fangzhigong_theme_pref') === 'dark') {
+                    document.documentElement.setAttribute('data-fangzhigong-theme', 'dark');
+                    document.documentElement.style.colorScheme = 'dark';
+                }
+            } catch (error) { /* 隐私模式下 localStorage 不可用 */ }
+        })();
+    </script>
+
     <link rel="icon" type="image/svg+xml" href="assets/images/app-icon.svg">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="坊知工">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="assets/images/app-icon-192.png">
+    <link rel="stylesheet" href="assets/css/shared/mobile-shell.css?v=20261118-mobile-v1">
     <title>智能问答 - 坊知工</title>
     <script>
         (function () {
@@ -16,8 +35,9 @@
             }
         })();
     </script>
-    <link rel="stylesheet" href="assets/css/shared/auth-ui.css?v=20260512-auth-modal-scrollbarhide-v3">
-    <link rel="stylesheet" href="assets/css/pages/chat-page.css?v=20261113-attachment-v6">
+    <link rel="stylesheet" href="assets/css/shared/auth-ui.css?v=20261119-auth-v4">
+    <link rel="stylesheet" href="assets/css/pages/chat-page.css?v=20261118-speech-v1">
+    <link rel="stylesheet" href="assets/css/shared/speech.css?v=20261118-speech-v1">
     <link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"></noscript>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
@@ -67,7 +87,7 @@
         body { background: #ffffff; }
         .global-sidebar, .chat-stage, .composer-card { background: #ffffff; }
     </style>
-    <link rel="stylesheet" href="assets/css/shared/site-theme.css?v=20261113-brand-icon-v2">
+    <link rel="stylesheet" href="assets/css/shared/site-theme.css?v=20261115-knowledge-v1">
     <link rel="stylesheet" href="assets/css/shared/attachment-ui.css?v=20261113-attachment-v2">
 </head>
 <body>
@@ -96,6 +116,7 @@
     </aside>
 
     <main class="chat-page-shell">
+        <div class="page-streak-dock" id="globalStreakDock"></div>
         <header class="chat-topbar">
             <div class="chat-topbar-main">
                 <div class="chat-title">智能问答</div>
@@ -152,13 +173,15 @@
         </div>
     </div>
 
-    <script src="assets/js/shared/user-context.js?v=20260330-authfix"></script>
+    <script src="assets/js/shared/user-context.js?v=20261119-auth-v4"></script>
     <script src="assets/js/shared/api-utils.js?v=20260511-auth-dup-check"></script>
     <script src="assets/js/shared/project-local-data.js?v=20260330-authfix"></script>
-    <script src="assets/js/shared/space-cloud-store.js?v=20260403-sidebarspaces"></script>
-    <script src="assets/js/shared/auth-ui.js?v=20260512-auth-register-autofill-fix"></script>
-    <script src="assets/js/shared/page-shell.js?v=20261113-graph-merge"></script>
+    <script src="assets/js/shared/space-cloud-store.js?v=20261118-search-v1"></script>
+    <script src="assets/js/shared/i18n.js?v=20261119-i18n-v2"></script>
+    <script src="assets/js/shared/auth-ui.js?v=20261119-auth-v4"></script>
+    <script src="assets/js/shared/page-shell.js?v=20261118-mobile-v1"></script>
+    <script src="assets/js/shared/speech-player.js?v=20261118-speech-v1"></script>
     <script src="assets/js/shared/attachment-handoff.js?v=20261113-attachment-v1"></script>
-    <script src="assets/js/pages/chat-page.js?v=20261113-attachment-v8"></script>
+    <script src="assets/js/pages/chat-page.js?v=20261118-speech-v1"></script>
 </body>
 </html>

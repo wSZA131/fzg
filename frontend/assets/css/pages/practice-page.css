@@ -1052,3 +1052,89 @@ body.practice-sheet-open {
     font-size: 36px;
   }
 }
+
+/* ---------------- 资料知识点（上传资料 → 题库练习） ---------------- */
+
+.practice-material-block {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--st-line, #ececf1);
+  border-radius: 14px;
+  background: #fbfcff;
+}
+
+.practice-material-block[hidden] {
+  display: none;
+}
+
+.practice-material-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.practice-material-title {
+  color: #1f2937;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.practice-material-hint {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: #8a94a6;
+  font-size: 12px;
+}
+
+.practice-material-refresh {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.practice-material-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.practice-material-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 6px 12px;
+  border: 1px solid #dbe5ef;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #38536d;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease;
+}
+
+.practice-material-chip:hover {
+  border-color: #9dc5e8;
+  color: #1168b5;
+}
+
+.practice-material-chip.is-active {
+  border-color: #171717;
+  background: #171717;
+  color: #ffffff;
+}
+
+.practice-material-empty {
+  color: #8a94a6;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.practice-material-actions {
+  margin-top: 12px;
+}
+
+.practice-material-generate[hidden] {
+  display: none;
+}

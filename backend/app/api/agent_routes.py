@@ -304,6 +304,62 @@ def get_agent_metrics():
     return jsonify({"success": True, "metrics": agent_metrics.snapshot()})
 
 
+def _eval_environment_snapshot():
+    """记录评测时的运行环境，让报告能自解释。
+
+    离线兜底（未配置 AI key）时回答是本地规则模板，keyword_score 必然偏低。
+    如果报告不标注环境，读者容易把兜底分误读成模型能力分。
+    """
+    from ..config import USE_REAL_AI
+    from ..services.knowledge_base import get_kb_readiness_report
+
+    provider = "mock"
+    model = "mock"
+    ai_key_configured = False
+    if USE_REAL_AI:
+        try:
+            from ..server import get_ai_runtime_config
+
+            cfg = get_ai_runtime_config() or {}
+            provider = str(cfg.get("provider") or provider)
+            model = str(cfg.get("model") or model)
+            ai_key_configured = bool(str(cfg.get("api_key") or "").strip())
+        except Exception:
+            ai_key_configured = False
+
+    try:
+        kb_report = get_kb_readiness_report() or {}
+    except Exception:
+        kb_report = {}
+
+    kb_summary = kb_report.get("summary") or {}
+    kb_mode = str(kb_summary.get("mode") or "")
+    agent_mode = "llm" if (USE_REAL_AI and ai_key_configured) else "local_rule_fallback"
+
+    notes = []
+    if agent_mode != "llm":
+        notes.append(
+            "AI 未启用（缺少 key 或 USE_REAL_AI=false），回答来自本地规则兜底，"
+            "keyword_score 不代表模型能力。"
+        )
+    if kb_mode == "demo_fallback":
+        notes.append(
+            "知识库运行在内置演示数据上（pro_kb 制品缺失或未执行 git lfs pull），"
+            "检索类指标不代表完整库效果。"
+        )
+
+    return {
+        "ai_enabled": bool(USE_REAL_AI),
+        "ai_key_configured": ai_key_configured,
+        "provider": provider,
+        "model": model,
+        "agent_mode": agent_mode,
+        "kb_mode": kb_mode,
+        "kb_ready": bool(kb_report.get("ready")),
+        "notes": notes,
+    }
+
+
 @agent_bp.route('/api/agent/eval', methods=['POST'])
 def run_agent_eval():
     """在线评测：输入样例列表并返回可复现指标。"""
@@ -373,6 +429,7 @@ def run_agent_eval():
     return jsonify(
         {
             "success": True,
+            "meta": _eval_environment_snapshot(),
             "summary": {
                 "cases": len(results),
                 "avg_score": round(avg_score, 4),
@@ -472,6 +529,7 @@ def run_agent_eval_ab():
     return jsonify(
         {
             "success": True,
+            "meta": _eval_environment_snapshot(),
             "summary": {
                 "cases": len(rows),
                 "baseline_avg_keyword_score": round(avg_base, 4),
