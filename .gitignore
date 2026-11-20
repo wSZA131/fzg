@@ -13,6 +13,7 @@ backend/venv/
 .env
 *.env
 backend/.env
+*credentials*.csv
 
 # Editor settings
 .vscode/
@@ -24,40 +25,37 @@ push.log
 backend/logs/*.log
 frontend/logs/*.log
 
-# Runtime data and local artifacts
-backend/dump.rdb
-backend/data/default_user_*.json
-backend/data/user_*.json
-backend/data/user_plans.json
-backend/data/users.json
-# 运行时用户数据（画像/会话/行为/题库/诊断/学习计划等，勿提交）
-backend/data/guest_*.json
-backend/data/ccc_*.json
-backend/data/reg4_*.json
-backend/data/stu_*.json
-backend/data/student_*.json
-backend/data/check_*.json
-backend/data/ddl_*.json
-backend/data/eval_*.json
-backend/data/smoke_*.json
-backend/data/sync_*.json
-backend/data/space_*.json
-backend/data/probe_*.json
-backend/data/concept_*.json
-backend/data/comp_*.json
-backend/data/diag_*.json
-backend/data/u1_*.json
-backend/data/*@*.json
-/data/
-backend/run/*.pid
-.run/
-.logs/
-
 # OS files
 .DS_Store
 Thumbs.db
 
-# 忽略数据库文件
+# 参赛材料与办公文档：含个人信息，不入库
+*.docx
+*.doc
+*.xlsx
+*.pptx
+
+# Database files
 backend/data/fzg.db
 database/*.db
 dump.rdb
+backend/dump.rdb
+
+# Runtime data and local artifacts
+backend/run/*.pid
+.run/
+.logs/
+
+# ==========================================================
+# backend/data 使用白名单：默认全部忽略，只放行明确需要的资产。
+#
+# 这里曾经是逐条列出用户名的黑名单，管线从未覆盖到
+# auth_users.json（密码哈希）、auth_sessions.json（会话）与
+# 邮箱账号的学习记录，导致这些数据被提交进仓库。
+# 黑名单永远会漏，白名单才是可控的。
+# ==========================================================
+backend/data/*
+!backend/data/pro_kb/
+!backend/data/pro_kb/**
+!backend/data/concept_stopwords.json
+!backend/data/question_bank_official_ai.json
